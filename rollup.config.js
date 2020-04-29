@@ -35,6 +35,27 @@ export default [
 	{
 		input: 'src/index.js',
 		output: {
+			file: 'dist/index.esm.min.js',
+			format: 'esm',
+		},
+		plugins: [
+			resolve(),
+			terser({
+				output: {
+					comments: false,
+				},
+				compress: {
+					ecma: 2018,
+					keep_classnames: true,
+					module: true,
+				},
+			}),
+			banner(bannerConfig),
+		],
+	},
+	{
+		input: 'src/index.js',
+		output: {
 			name: 'MiniHandle',
 			file: 'dist/browser.js',
 			format: 'umd',
@@ -69,7 +90,9 @@ export default [
 					'@babel/env',
 				],
 			}),
-			terser(),
+			terser({ output: {
+				comments: false,
+			} }),
 			banner(bannerConfig),
 		],
 	},
