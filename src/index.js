@@ -1,6 +1,6 @@
 
 import lexer from './lexer';
-import { isStringType, wtf, set, makeFrame, makeSafe } from './utils';
+import { isStringType, wtf, isObject, set, makeFrame, makeSafe } from './utils';
 import {
 	Text,
 	Block,
@@ -45,7 +45,14 @@ export default function Handybars (template, env = {}) {
 		return ast.evaluate(scope, world).value;
 	}
 
-	execute.set = (...args) => set(world, ...args);
+	execute.set = (...args) => {
+		if (isObject(args[0])) {
+			Object.assign(world, ...args);
+		} else {
+			set(world, ...args);
+		}
+		return execute;
+	};
 
 	return execute;
 }
