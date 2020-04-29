@@ -1,5 +1,4 @@
 
-import { htmlEscape } from 'escape-goat'; // eslint-disable-line node/no-unpublished-import
 
 export function makeFrame (data) {
 	if (!data) return {};
@@ -10,6 +9,14 @@ export function makeFrame (data) {
 	frame['@root'] = data['@root'] || data;
 	return frame;
 }
+
+// htmlEscape copied from Sindre Sorhus' escape-goat
+const htmlEscape = (input) => input
+	.replace(/&/g, '&amp;')
+	.replace(/"/g, '&quot;')
+	.replace(/'/g, '&#39;')
+	.replace(/</g, '&lt;')
+	.replace(/>/g, '&gt;');
 
 export function makeSafe (input) {
 	if (isUndefinedOrNull(input)) return { value: '' };
