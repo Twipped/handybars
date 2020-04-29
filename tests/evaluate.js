@@ -1,7 +1,14 @@
 /* eslint quotes:0, new-cap:0 */
 
 import tap from 'tap';
-import { Text, Block } from '../src/taxonomy';
+import {
+	Text,
+	Block,
+	Invocation,
+	Collection,
+	Identifier,
+	Literal,
+} from '../src/taxonomy';
 import Helpers from '../src/helpers';
 
 const IDENTIFIER  = (v)    => [ 'IDENTIFIER', v ];
@@ -10,34 +17,44 @@ const LITERAL     = (v)    => [ 'LITERAL', v ];
 tap.test('evaluate 1', (t) => {
 
 	const AST = new Block({
-		target: null,
-		arguments: [],
-		children: [
+		type: 'ROOT',
+		invoker: null,
+		left: [
 			new Text({ value: 'a\nb' }),
 			new Block({
-				target: 'c',
-				arguments: [],
+				type: 'c',
+				invoker: new Invocation({
+					arguments: [ new Identifier('c') ],
+				}),
 			}),
 			new Text({ value: 'd' }),
 			new Block({
-				target: 'e',
-				arguments: [],
-				children: [
+				type: 'e',
+				invoker: new Invocation({
+					arguments: [ new Identifier('e') ],
+				}),
+				left: [
 					new Block({
-						target: 'f.g',
-						arguments: [
-							LITERAL('h'),
-						],
+						type: 'f.g',
+						invoker: new Invocation({
+							arguments: [
+								new Identifier('f.g', true),
+								new Literal('h'),
+							],
+						}),
 					}),
 					new Text({ value: 'i' }),
 				],
 			}),
 			new Text({ value: '<k>' }),
 			new Block({
-				target: 'l',
-				arguments: [
-					IDENTIFIER('m'),
-				],
+				type: 'l',
+				invoker: new Invocation({
+					arguments: [
+						new Identifier('l', true),
+						new Identifier('m'),
+					],
+				}),
 			}),
 			new Text({ value: 'n' }),
 		],
@@ -81,19 +98,23 @@ tap.test('evaluate 1', (t) => {
 tap.test('evaluate else', (t) => {
 
 	const AST = new Block({
-		target: null,
-		arguments: [],
-		children: [
+		type: 'ROOT',
+		invoker: null,
+		left: [
 			new Block({
-				target: 'if',
-				arguments: [ IDENTIFIER('a') ],
-				children: [
+				type: 'if',
+				invoker: new Invocation({
+					arguments: [ new Identifier('a') ],
+				}),
+				left: [
 					new Text({ value: 'b' }),
 				],
-				alternates: [
+				right: [
 					new Block({
-						target: 'c',
-						arguments: [],
+						type: 'c',
+						invoker: new Invocation({
+							arguments: [ new Identifier('c') ],
+						}),
 						raw: true,
 					}),
 				],

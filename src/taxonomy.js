@@ -78,12 +78,13 @@ export class Invocation extends Node {
 	}
 
 	evaluate (scope, env = {}, { fn, inverse }) {
-		let { target, ...args } = this.arguments;
+		if (!this.arguments.length) return ''; // this shouldn't happen
+		let [ target, ...args ] = this.arguments;
 		target = target.evaluate(scope, env);
 
 		if (!isFunctionType(target)) {
 			if (target && fn) return fn(scope);
-			if (!target && inverse) return inverse();
+			if (!target && inverse) return inverse(scope);
 			if (fn && inverse) return target ? fn(scope) : inverse(scope);
 			return target;
 		}
