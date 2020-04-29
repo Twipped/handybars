@@ -284,9 +284,9 @@ export function map (collection, predicate) {
 export function makeIterate (predicate, tuple = false) {
 	predicate = iteratee(predicate);
 	const result = {};
-	function iterate (v, k, i) {
+	function iterate (val, k, i) {
 		// return true to continue looping
-		const res = predicate(v, k, i) || [];
+		const res = predicate(val, k, i) || [];
 		if (tuple) {
 			if (res === false) return false;
 			if (!res || !isArray(res)) return true;

@@ -5,14 +5,10 @@ import {
 	Text,
 	Block,
 	Invocation,
-	Collection,
 	Identifier,
 	Literal,
 } from '../src/taxonomy';
 import Helpers from '../src/helpers';
-
-const IDENTIFIER  = (v)    => [ 'IDENTIFIER', v ];
-const LITERAL     = (v)    => [ 'LITERAL', v ];
 
 tap.test('evaluate 1', (t) => {
 
