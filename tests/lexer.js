@@ -2,43 +2,58 @@
 
 import tap from 'tap';
 import lex from '../src/lexer';
-import { Text, Block } from '../src/taxonomy';
-
-const IDENTIFIER  = (v)    => [ 'IDENTIFIER', v ];
-const LITERAL     = (v)    => [ 'LITERAL', v ];
+import {
+	Text,
+	Block,
+	Invocation,
+	Collection,
+	Identifier,
+	Literal,
+} from '../src/taxonomy';
 
 tap.test('lex', (t) => {
-	const result = lex('a\nb{{c}}d{{#e}}{{f.g "h"}}i{{/e}}k{{l m}}n');
+	const result = lex('a\nb{{c}}d{{#e}}{{f.g ["h" 2]}}i{{/e}}k{{l (m)}}n');
 
 	const expected = new Block({
-		target: null,
-		arguments: [],
-		children: [
+		type: 'ROOT',
+		invoker: null,
+		left: [
 			new Text({ value: 'a\nb' }),
 			new Block({
-				target: 'c',
-				arguments: [],
+				type: 'c',
+				invoker: new Invocation({
+					arguments: [ new Identifier('c') ],
+				}),
 			}),
 			new Text({ value: 'd' }),
 			new Block({
-				target: 'e',
-				arguments: [],
-				children: [
+				type: 'e',
+				invoker: new Invocation({
+					arguments: [ new Identifier('e') ],
+				}),
+				left: [
 					new Block({
-						target: 'f.g',
-						arguments: [
-							LITERAL('h'),
-						],
+						type: 'f.g',
+						invoker: new Invocation({ arguments: [
+							new Identifier('f.g', true),
+							new Collection([
+								new Literal('h'),
+								new Literal(2),
+							]),
+						] }),
 					}),
 					new Text({ value: 'i' }),
 				],
 			}),
 			new Text({ value: 'k' }),
 			new Block({
-				target: 'l',
-				arguments: [
-					IDENTIFIER('m'),
-				],
+				type: 'l',
+				invoker: new Invocation({ arguments: [
+					new Identifier('l', true),
+					new Invocation({
+						arguments: [ new Identifier('m') ],
+					}),
+				] }),
 			}),
 			new Text({ value: 'n' }),
 		],
@@ -48,37 +63,30 @@ tap.test('lex', (t) => {
 	t.end();
 });
 
-
-// BLOCK_OPEN(
-// 	IDENTIFIER('if'),
-// 	IDENTIFIER('a'),
-// ),
-// RAW_TEXT('b'),
-// ELSE(),
-// RAW_INSERTION(
-// 	IDENTIFIER('c'),
-// ),
-// BLOCK_CLOSE(
-// 	IDENTIFIER('if'),
-// ),
-
 tap.test('lex else', (t) => {
 	const result = lex('{{#if a}}b{{else}}{{{c}}}{{/if}}');
 
 	const expected = new Block({
-		target: null,
-		arguments: [],
-		children: [
+		type: 'ROOT',
+		invoker: null,
+		left: [
 			new Block({
-				target: 'if',
-				arguments: [ IDENTIFIER('a') ],
-				children: [
+				type: 'if',
+				invoker: new Invocation({
+					arguments: [
+						new Identifier('if', true),
+						new Identifier('a'),
+					],
+				}),
+				left: [
 					new Text({ value: 'b' }),
 				],
-				alternates: [
+				right: [
 					new Block({
-						target: 'c',
-						arguments: [],
+						type: 'c',
+						invoker: new Invocation({
+							arguments: [ new Identifier('c') ],
+						}),
 						raw: true,
 					}),
 				],

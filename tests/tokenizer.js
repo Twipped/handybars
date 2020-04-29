@@ -4,34 +4,69 @@ import tap from 'tap';
 import { tokenize, tokenizeArguments } from '../src/lexer';
 
 const IDENTIFIER    = (v)    => [ 'IDENTIFIER', v ];
+const COMP_IDENTIFIER = (v)  => [ 'IDENTIFIER', v, { 'BRACKET_OPEN': 'BRACKET_OPEN' } ];
 const LITERAL       = (v)    => [ 'LITERAL', v ];
-const EMBED         = (...v) => [ 'EMBED', v ];
 const RAW_TEXT      = (v)    => [ 'RAW_TEXT', v ];
 const BLOCK_OPEN    = (...v) => [ 'BLOCK_OPEN', v ];
 const BLOCK_CLOSE   = (...v) => [ 'BLOCK_CLOSE', v ];
 const INSERTION     = (...v) => [ 'INSERTION', v ];
 const RAW_INSERTION = (...v) => [ 'INSERTION', v, { raw: true } ];
+const ASSIGNMENT    = (v)    => [ 'ASSIGNMENT', v ];
 const ELSE          = () => [ 'ELSE' ];
+const BRACKET_OPEN      = () => [ 'BRACKET_OPEN' ];
+const BRACKET_CONTINUE  = () => [ 'BRACKET_CONTINUE' ];
+const BRACKET_APPEND    = () => [ 'BRACKET_APPEND' ];
+const BRACKET_CLOSE     = () => [ 'BRACKET_CLOSE' ];
+const PAREN_OPEN        = () => [ 'PAREN_OPEN' ];
+const PAREN_CLOSE       = () => [ 'PAREN_CLOSE' ];
 
 tap.test('tokenizeArguments', (t) => {
-	const result = tokenizeArguments(`e f.g "h" true false 'i' 123 null j[k] (l "m" n) `);
-
-	t.deepEqual(result, [
-		IDENTIFIER('e'),
-		IDENTIFIER('f.g'),
-		LITERAL('h'),
-		LITERAL( true),
-		LITERAL(false),
-		LITERAL('i'),
-		LITERAL(123),
-		LITERAL(null),
-		IDENTIFIER('j[k]'),
-		EMBED(
-			IDENTIFIER('l'),
-			LITERAL('m'),
+	t.deepEqual(
+		tokenizeArguments(`e f.g "h" true [a 'b' c.d] false z=2 'i' 123 null j[k][5].m (n "o") `),
+		[
+			IDENTIFIER('e'),
+			IDENTIFIER('f.g'),
+			LITERAL('h'),
+			LITERAL(true),
+			BRACKET_OPEN(),
+			IDENTIFIER('a'),
+			LITERAL('b'),
+			IDENTIFIER('c.d'),
+			BRACKET_CLOSE(),
+			LITERAL(false),
+			ASSIGNMENT('z'),
+			LITERAL(2),
+			LITERAL('i'),
+			LITERAL(123),
+			LITERAL(null),
+			COMP_IDENTIFIER('j'),
+			IDENTIFIER('k'),
+			BRACKET_CONTINUE(),
+			LITERAL(5),
+			BRACKET_APPEND(),
+			IDENTIFIER('m'),
+			PAREN_OPEN(),
 			IDENTIFIER('n'),
-		),
-	]);
+			LITERAL('o'),
+			PAREN_CLOSE(),
+		],
+	);
+	t.deepEqual(
+		tokenizeArguments(`[a[b].c (d) false] z`),
+		[
+			BRACKET_OPEN(),
+			COMP_IDENTIFIER('a'),
+			IDENTIFIER('b'),
+			BRACKET_APPEND(),
+			IDENTIFIER('c'),
+			PAREN_OPEN(),
+			IDENTIFIER('d'),
+			PAREN_CLOSE(),
+			LITERAL(false),
+			BRACKET_CLOSE(),
+			IDENTIFIER('z'),
+		],
+	);
 	t.end();
 });
 

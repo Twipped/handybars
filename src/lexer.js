@@ -1,6 +1,6 @@
 
 import tokenizer from './tokenizer';
-import { wtf } from './utils';
+import { wtf, v, isUndefined, isStringType } from './utils';
 
 import {
 	BLOCK_OPEN,
@@ -10,17 +10,23 @@ import {
 	RAW_TEXT,
 	IDENTIFIER,
 	LITERAL,
-	EMBED,
+	ASSIGNMENT,
+	BRACKET_OPEN,
+	BRACKET_CONTINUE,
+	BRACKET_APPEND,
+	BRACKET_CLOSE,
+	PAREN_OPEN,
+	PAREN_CLOSE,
 
-	isBlockOpen,
-	isBlockClose,
-	isElse,
-	isInsertion,
-	isRawText,
 	isIdentifier,
 
 	Text,
 	Block,
+	Invocation,
+	Literal,
+	Identifier,
+	CompoundIdentifier,
+	Collection,
 } from './taxonomy';
 
 export const tokenize = tokenizer()
@@ -51,7 +57,13 @@ export const tokenize = tokenizer()
 ;
 
 export const tokenizeArguments = tokenizer()
-	.rule(/\s+/)
+	.rule(/\s+/) // WHITE SPACE
+	.rule(/]\[/,  () => [ BRACKET_CONTINUE ])
+	.rule(/]\./,  () => [ BRACKET_APPEND ])
+	.rule(/]/,  () => [ BRACKET_CLOSE ])
+	.rule(/\[/, () => [ BRACKET_OPEN ])
+	.rule(/\)/,  () => [ PAREN_CLOSE ])
+	.rule(/\(/, () => [ PAREN_OPEN ])
 	.rule(/(true|false|null)/i, (match) => [
 		LITERAL,
 		{
@@ -60,14 +72,15 @@ export const tokenizeArguments = tokenizer()
 			'null': null,
 		}[match[1].toLowerCase()],
 	])
-	.rule(/\d+/, (match) => [
+	.rule(/-?\d+(?:\.[\d]+)?/, (match) => [
 		LITERAL,
-		match[0],
+		Number(match[0]),
 	])
-	.rule(/[\w.$_[\]]+/, (match) => [
-		IDENTIFIER,
-		match[0],
-	])
+	.rule(/([a-zA-Z][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
+	.rule(/([a-zA-Z][\w.$_]*)(\[?)/, (match) => {
+		if (match[2]) return [ IDENTIFIER, match[1], { BRACKET_OPEN } ];
+		return [ IDENTIFIER, match[1] ];
+	})
 	.rule(/"((?:[^"\\]|\\.)*?)"/, (match) => [
 		LITERAL,
 		match[1],
@@ -76,64 +89,267 @@ export const tokenizeArguments = tokenizer()
 		LITERAL,
 		match[1],
 	])
-	.rule(/\((.+?)\)/, (match) => [
-		EMBED,
-		tokenizeArguments(match[1]),
-	]);
+;
 
 export default function lex (input) {
 	const tokens = tokenize(input);
 
-	function descend (openTarget, ...args) {
+	function descend (invocationArguments) {
+		if (!isIdentifier(invocationArguments[0])) wtf('Block helpers must start with a variable identifier.');
+
+		const type = invocationArguments[0][1];
 		const block = new Block({
-			target: openTarget[1],
-			arguments: args,
-			children: [],
+			type,
+			invoker: type === 'ROOT' ? null : lexArguments(invocationArguments),
+			left: [],
 		});
 
-		let children = block.children;
+		let children = block.left;
 
 		let tok;
 		while ((tok = tokens.shift())) {
-			const opts = tok[2];
-			const value = tok[1];
-			if (isRawText(tok)) {
-				children.push(new Text({ value }));
+			const [ tokType, tokValue, tokOptions ] = tok;
+
+			if (tokType === RAW_TEXT) {
+				children.push(new Text({ value: tokValue }));
 				continue;
 			}
 
-			if (isBlockClose(tok)) {
-				const [ closeTarget ] = value;
+			if (tokType === BLOCK_CLOSE) {
+				const [ closeTarget ] = tokValue;
 				if (!isIdentifier(closeTarget)) wtf('Invalid block type: ' + closeTarget[1]);
-				if (closeTarget[1] !== openTarget[1]) wtf('Mismatching block closure: ' + closeTarget[1]);
+				if (v(closeTarget) !== block.type) wtf('Mismatching block closure: ' + closeTarget[1]);
 				return block;
 			}
 
-			if (isBlockOpen(tok)) {
-				if (!isIdentifier(value[0])) wtf('Invalid block type: ' + value[0][1]);
-				children.push(descend(...value));
-				if (opts) Object.assign(children[ children.length - 1], opts);
+			if (tokType === BLOCK_OPEN) {
+				const [ openTarget ] = tokValue;
+				if (!isIdentifier(openTarget)) wtf('Invalid block type: ' + openTarget[1]);
+				children.push(descend(tokValue));
+				if (tokOptions) Object.assign(children[ children.length - 1], tokOptions);
 				continue;
 			}
 
-			if (isInsertion(tok)) {
-				const [ target, ...targs ] = value;
+			if (tokType === INSERTION) {
+				const [ openTarget ] = tokValue;
 				children.push(new Block({
-					target: target[1],
-					arguments: targs,
-					...opts,
+					type: v(openTarget),
+					invoker: lexArguments(tokValue),
+					...tokOptions,
 				}));
 			}
 
-			if (isElse(tok)) {
-				children = block.alternates = [];
+			if (tokType === ELSE) {
+				children = block.right = [];
 				continue;
 			}
 		}
 
-		if (openTarget[0] !== 'ROOT') wtf('Unexpected end of template, unclosed block: ' + openTarget[1]);
+		if (block.type !== 'ROOT') wtf('Unexpected end of template, unclosed block: ' + block.type);
 		return block;
 	}
 
-	return descend([ 'ROOT' ]);
+	return descend([ [ 'IDENTIFIER', 'ROOT' ] ]);
+}
+
+export function lexArguments (input) {
+	const tokens = [ ...input ];
+
+	function peek (type, delta) {
+		if (isUndefined(type) || (isStringType(type) && isUndefined(delta))) delta = 1;
+		const tok = tokens[Math.max(0, delta - 1)];
+		if (type && tok[0] !== type) return null;
+		return tok;
+	}
+
+	function read (type) {
+		const tok = tokens[0];
+		if (type && tok[0] !== type) return null;
+		return tokens.shift();
+	}
+
+	function descendCompoundIdent (initial) {
+		const ident = new CompoundIdentifier(initial);
+
+		let tok;
+		let appending = false;
+		while ((tok = read())) {
+			const [ tokType, tokValue, tokOptions ] = tok;
+
+			if (tokType === BRACKET_APPEND) {
+				appending = true;
+				continue;
+			}
+
+			if (tokType === BRACKET_CONTINUE) {
+				continue;
+			}
+
+			if (tokType === BRACKET_CLOSE) {
+				return ident;
+			}
+
+			if (tokType === IDENTIFIER) {
+				const opening = tokOptions && tokOptions[BRACKET_OPEN];
+				if (appending) {
+					appending = false;
+					if (opening) {
+						ident.pushRef(new Identifier(tokValue));
+					} else {
+						ident.pushTarget(new Identifier(tokValue));
+					}
+				} else if (opening) {
+					ident.pushRef(descendCompoundIdent(tokValue));
+				} else {
+					ident.pushRef(new Identifier(tokValue));
+				}
+
+				if (peek(IDENTIFIER) || peek(LITERAL)) {
+					wtf('Unexpected double identifier/literal inside compound identifier');
+				}
+				continue;
+			}
+
+			if (tokType === LITERAL) {
+				if (appending) {
+					wtf('Unexpected literal found appended to a compound identifier.');
+				}
+
+				ident.pushTarget(new Literal(tokValue));
+				continue;
+			}
+
+			if (tokType === PAREN_OPEN) {
+				ident.pushRef(descendInvocation(true));
+				continue;
+			}
+
+			wtf('Unexpected token: ' + tokType);
+		}
+
+		wtf('Unexpected end of token stream, unclosed compound identifier');
+	}
+
+	function descendInvocation (embedded = false) {
+		const invocation = new Invocation();
+		const children = invocation.arguments;
+
+		let tok;
+		let assigning = false;
+		while ((tok = read())) {
+			const [ tokType, tokValue, tokOptions ] = tok;
+
+			if (children.length && tokType !== PAREN_CLOSE) children[0].critical = true;
+
+			if (tokType === IDENTIFIER) {
+				if (tokOptions && tokOptions[BRACKET_OPEN]) {
+					if (assigning) {
+						invocation.hash[assigning] = descendCompoundIdent(tokValue);
+						assigning = false;
+					} else {
+						children.push(descendCompoundIdent(tokValue));
+					}
+				} else if (assigning) {
+					invocation.hash[assigning] = new Identifier(tokValue);
+					assigning = false;
+				} else {
+					children.push(new Identifier(tokValue));
+				}
+
+				continue;
+			}
+
+			if (!children.length) wtf('Block helpers must start with a variable identifier.');
+
+			if (tokType === PAREN_OPEN) {
+				if (assigning) {
+					invocation.hash[assigning] = descendInvocation(true);
+					assigning = false;
+				} else {
+					children.push(descendInvocation(true));
+				}
+				continue;
+			}
+
+			if (tokType === LITERAL) {
+				if (assigning) {
+					invocation.hash[assigning] = new Literal(tokValue);
+					assigning = false;
+				} else {
+					children.push(new Literal(tokValue));
+				}
+				continue;
+			}
+
+			if (tokType === BRACKET_OPEN) {
+				if (assigning) {
+					invocation.hash[assigning] = descendCollection();
+					assigning = false;
+				} else {
+					children.push(descendCollection());
+				}
+				continue;
+			}
+
+			if (assigning) wtf('Unexpected token: ' + tokType);
+
+			if (tokType === PAREN_CLOSE) {
+				if (!embedded) wtf('Unexpected token: ' + tokType);
+				return invocation;
+			}
+
+			if (tokType === ASSIGNMENT) {
+				assigning = tokValue;
+				continue;
+			}
+
+			wtf('Unexpected token: ' + tokType);
+		}
+
+		if (embedded) wtf('Unexpected end of token stream, unclosed nested invocation.');
+		return invocation;
+	}
+
+	function descendCollection () {
+		const collection = new Collection();
+		const children = collection.arguments;
+
+		let tok;
+		while ((tok = read())) {
+			const [ tokType, tokValue, tokOptions ] = tok;
+
+			if (tokType === BRACKET_CLOSE) {
+				return collection;
+			}
+
+			if (tokType === PAREN_OPEN) {
+				children.push(descendInvocation(true));
+				continue;
+			}
+
+			if (tokType === IDENTIFIER) {
+				if (tokOptions[BRACKET_OPEN]) {
+					children.push(descendCompoundIdent(tok));
+				} else {
+					children.push(new Identifier(tokValue));
+				}
+				continue;
+			}
+
+			if (tokType === LITERAL) {
+				children.push(new Literal(tokValue));
+				continue;
+			}
+
+			if (tokType === BRACKET_OPEN) {
+				children.push(descendCollection());
+				continue;
+			}
+
+			wtf('Unexpected token: ' + tokType);
+		}
+
+	}
+
+	return descendInvocation();
 }

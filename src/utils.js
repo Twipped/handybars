@@ -1,5 +1,5 @@
 
-import { htmlEscape } from 'escape-goat';
+import { htmlEscape } from 'escape-goat'; // eslint-disable-line node/no-unpublished-import
 
 export function makeFrame (data) {
 	if (!data) return {};
@@ -22,6 +22,21 @@ export function makeSafe (input) {
 	return { value: '' };
 }
 
+export function deSafe (input) {
+	if (isUndefinedOrNull(input)) return '';
+	if (isStringType(input)) {
+		return input;
+	}
+	if (isObject(input) && hasOwn(input, 'value')) {
+		return input.value;
+	}
+	return '';
+}
+
+export function isa (constructor) {
+	return (input) => input instanceof constructor;
+}
+
 const uc = (str) => String(str).toUpperCase();
 
 export function is (type, value) {
@@ -40,6 +55,10 @@ export function is (type, value) {
 
 	value = uc(value);
 	return (tok) => matchType(tok) && uc(tok[1]) === value;
+}
+
+export function v (tok) {
+	return tok[1];
 }
 
 export function isNumberType    (input) { return typeof input === 'number' && !isNaN(input); }
@@ -66,7 +85,7 @@ export function hasOwn (obj, key) {
 }
 
 export function get (obj, path, defaultValue) {
-	if (path === null && path === undefined && path === '') return defaultValue;
+	if (isUndefinedOrNull(path) || path === '') return defaultValue;
 	if (isNumberType(path)) path = [ String(path) ];
 	else if (isStringType(path)) {
 		if (hasOwn(obj, path)) return obj[path];
@@ -74,19 +93,20 @@ export function get (obj, path, defaultValue) {
 	}
 
 	const result = path
-		.filter((s) => s !== null && s !== undefined && s !== '')
+		.filter((s) => s !== null && !isUndefined(s) && s !== '')
 		.reduce((res, key) =>
-			((res !== null && res !== undefined) ? res[key] : res)
+			((res !== null && !isUndefined(res)) ? res[key] : res)
 		, obj);
-	return (result === undefined || result === obj) ? defaultValue : result;
+	return (isUndefined(result) || result === obj) ? defaultValue : result;
 }
 
 export function has (obj, path) {
+	if (isUndefinedOrNull(path) || path === '') return false;
 	if (isNumberType(path)) path = [ String(path) ];
 	else if (isStringType(path)) path = String.prototype.split.call(path, /[,[\].]+?/);
 	let res = obj;
 	for (const key of path) {
-		if (res === null || res === undefined) return false;
+		if (res === null || isUndefined(res)) return false;
 		if (typeof res !== 'object' && typeof res !== 'function') return false;
 		if (!hasOwn(res, key)) return false;
 		res = res[key];
@@ -95,7 +115,7 @@ export function has (obj, path) {
 }
 
 export function set (obj, path, value) {
-	if (path === null && path === undefined && path === '') return false;
+	if (isUndefinedOrNull(path) || path === '') return false;
 	if (isNumberType(path)) path = [ String(path) ];
 	else if (isStringType(path)) {
 		if (hasOwn(obj, path)) {
@@ -259,4 +279,61 @@ export function map (collection, predicate) {
 	}
 
 	return [];
+}
+
+export function mapValues (collection, predicate) {
+	predicate = iteratee(predicate);
+	return mapReduce(collection, (value, key, index) => [ key, predicate(value, key, index) ]);
+}
+
+export function mapReduce (collection, predicate) {
+	if (!collection) return {};
+
+	const result = {};
+	function iterate (v, k, i) {
+		// return true to continue looping
+		const res = predicate(v, k, i) || [];
+		if (res === false) return false;
+		if (!res || !isArray(res)) return true;
+		const [ key, value ] = res;
+		if (isUndefinedOrNull(key) || isUndefined(value)) return true;
+		result[key] = value;
+		return true;
+	}
+
+	if (isArray(collection)) {
+		let i = 0;
+		for (const value of collection) {
+			if (!iterate(value, i, i++)) break;
+		}
+		return result;
+	}
+
+	if (isSet(collection)) {
+		let i = 0;
+		for (const item of collection) {
+			if (!iterate(item, i, i++)) break;
+		}
+		return result;
+	}
+
+	// received a Map
+	if (isMap(collection)) {
+		let i = 0;
+		for (const [ key, value ] of collection.entries()) {
+			if (!iterate(value, key, i++)) break;
+		}
+		return result;
+	}
+
+	// received an object hash
+	if (isObject(collection)) {
+		let i = 0;
+		for (const [ key, value ] of Object.entries(collection)) {
+			if (!iterate(value, key, i++)) break;
+		}
+		return result;
+	}
+
+	return result;
 }

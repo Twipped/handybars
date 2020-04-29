@@ -1,7 +1,14 @@
 
 import lexer from './lexer';
-import { isStringType, wtf, set } from './utils';
-import { Text, Block } from './taxonomy';
+import { isStringType, wtf, set, makeFrame, makeSafe } from './utils';
+import {
+	Text,
+	Block,
+	Invocation,
+	Collection,
+	Identifier,
+	Literal,
+} from './taxonomy';
 import DefaultHelpers from './helpers';
 
 export function parse (input) {
@@ -22,6 +29,12 @@ export function evaluate (input, scope) {
 export {
 	Text,
 	Block,
+	Invocation,
+	Collection,
+	Identifier,
+	Literal,
+	makeFrame,
+	makeSafe,
 };
 
 export default function Handybars (template, env = {}) {
@@ -40,4 +53,8 @@ export default function Handybars (template, env = {}) {
 Object.assign(Handybars, {
 	Text,
 	Block,
+	Invocation,
+	Collection,
+	Identifier,
+	Literal,
 });
