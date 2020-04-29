@@ -37,19 +37,19 @@ export {
 	makeSafe,
 };
 
-export default function Handybars (template, env = {}) {
+export default function Handybars (template, world = {}) {
 	const ast = parse(template);
-	const world = { ...DefaultHelpers, ...env };
+	const env = { ...DefaultHelpers, ...world };
 
 	function execute (scope) {
-		return ast.evaluate(scope, world).value;
+		return ast.evaluate(scope, env).value;
 	}
 
 	execute.set = (...args) => {
 		if (isObject(args[0])) {
-			Object.assign(world, ...args);
+			Object.assign(env, ...args);
 		} else {
-			set(world, ...args);
+			set(env, ...args);
 		}
 		return execute;
 	};
