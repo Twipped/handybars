@@ -267,80 +267,79 @@ export function map (collection, predicate) {
 
 	if (isArray(collection)) {
 		return collection.map((value, i) => predicate(value, i, i));
-	}
-
-	if (isSet(collection)) {
+	} else if (isSet(collection)) {
 		return Array.from(collection, (value, i) => predicate(value, i, i));
-	}
-
-	if (isMap(collection)) {
+	} else if (isMap(collection)) {
 		return Array.from(collection.entries(), ([ key, value ], index) => predicate(value, key, index));
-	}
-
-	if (isObject(collection)) {
+	} else if (isObject(collection)) {
 		return Object.entries(collection).map(([ key, value ], index) => predicate(value, key, index));
-	}
-
-	if (isStringType(collection)) {
+	} else if (isStringType(collection)) {
 		return collection.split().map((value, i) => predicate(value, i, i));
 	}
 
 	return [];
 }
 
-export function mapValues (collection, predicate) {
+export function makeIterate (predicate, tuple = false) {
 	predicate = iteratee(predicate);
-	return mapReduce(collection, (value, key, index) => [ key, predicate(value, key, index) ]);
+	const result = {};
+	function iterate (v, k, i) {
+		// return true to continue looping
+		const res = predicate(v, k, i) || [];
+		if (tuple) {
+			if (res === false) return false;
+			if (!res || !isArray(res)) return true;
+			const [ key, value ] = res;
+			if (isUndefinedOrNull(key) || isUndefined(value)) return true;
+			result[key] = value;
+		} else {
+			result[k] = res;
+		}
+		return true;
+	}
+
+	iterate.result = () => result;
+
+	return iterate;
+}
+
+export function mapValues (collection, predicate) {
+	if (!isObject(collection)) throw new Error('mapValues only works for simple objects, use mapReduce.');
+	const iterate = makeIterate(predicate);
+
+	let i = 0;
+	for (const [ key, value ] of Object.entries(collection)) {
+		if (!iterate(value, key, i++)) break;
+	}
+	return iterate.result();
 }
 
 export function mapReduce (collection, predicate) {
 	if (!collection) return {};
 
-	const result = {};
-	function iterate (v, k, i) {
-		// return true to continue looping
-		const res = predicate(v, k, i) || [];
-		if (res === false) return false;
-		if (!res || !isArray(res)) return true;
-		const [ key, value ] = res;
-		if (isUndefinedOrNull(key) || isUndefined(value)) return true;
-		result[key] = value;
-		return true;
-	}
+	const iterate = makeIterate(predicate, true);
 
 	if (isArray(collection)) {
 		let i = 0;
 		for (const value of collection) {
 			if (!iterate(value, i, i++)) break;
 		}
-		return result;
-	}
-
-	if (isSet(collection)) {
+	} else if (isSet(collection)) {
 		let i = 0;
 		for (const item of collection) {
 			if (!iterate(item, i, i++)) break;
 		}
-		return result;
-	}
-
-	// received a Map
-	if (isMap(collection)) {
+	} else if (isMap(collection)) {
 		let i = 0;
 		for (const [ key, value ] of collection.entries()) {
 			if (!iterate(value, key, i++)) break;
 		}
-		return result;
-	}
-
-	// received an object hash
-	if (isObject(collection)) {
+	} else if (isObject(collection)) {
 		let i = 0;
 		for (const [ key, value ] of Object.entries(collection)) {
 			if (!iterate(value, key, i++)) break;
 		}
-		return result;
 	}
 
-	return result;
+	return iterate.result();
 }
