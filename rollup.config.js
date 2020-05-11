@@ -96,4 +96,16 @@ export default [
 			banner(bannerConfig),
 		],
 	},
+	{
+		input: 'src/utils.js',
+		output: {
+			file: 'util.js',
+			format: 'cjs',
+			exports: 'named',
+		},
+		plugins: [
+			resolve(),
+			banner(bannerConfig),
+		],
+	},
 ];

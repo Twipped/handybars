@@ -1,6 +1,6 @@
 
 import lexer from './lexer';
-import { isStringType, wtf, isObject, set, makeFrame, makeSafe } from './utils';
+import { isString, wtf, isObject, set, makeContext, makeSafe, safeJoin } from './utils';
 import {
 	Text,
 	Block,
@@ -12,13 +12,13 @@ import {
 import DefaultHelpers from './helpers';
 
 export function parse (input) {
-	if (isStringType(input)) return lexer(input);
+	if (isString(input)) return lexer(input);
 	if ((input instanceof Block)) return input;
 	wtf('Parse can only receive strings or a Handybars AST tree');
 }
 
 export function evaluate (input, scope) {
-	if (isStringType(input)) input = lexer(input);
+	if (isString(input)) input = lexer(input);
 	else if (!(input instanceof Block)) {
 		wtf('Evaluate can only receive strings or a Handybars AST tree');
 	}
@@ -27,14 +27,16 @@ export function evaluate (input, scope) {
 }
 
 export {
+	parse as partial,
 	Text,
 	Block,
 	Invocation,
 	Collection,
 	Identifier,
 	Literal,
-	makeFrame,
+	makeContext,
 	makeSafe,
+	safeJoin,
 };
 
 export default function Handybars (template, world = {}) {
@@ -54,14 +56,21 @@ export default function Handybars (template, world = {}) {
 		return execute;
 	};
 
+	execute.setPartial = (name, subtemplate) => set(env, name, lexer(subtemplate));
+
 	return execute;
 }
 
 Object.assign(Handybars, {
+	parse,
+	evaluate,
 	Text,
 	Block,
 	Invocation,
 	Collection,
 	Identifier,
 	Literal,
+	makeContext,
+	makeSafe,
+	safeJoin,
 });

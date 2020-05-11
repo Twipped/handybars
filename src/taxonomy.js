@@ -1,5 +1,5 @@
 
-import { is, get, wtf, isFunctionType, makeSafe, deSafe, mapValues } from './utils';
+import { tis, get, wtf, isFunction, makeSafe, deSafe, mapValues, makeContext } from './utils';
 
 export const BLOCK_OPEN  = 'BLOCK_OPEN';
 export const BLOCK_CLOSE = 'BLOCK_CLOSE';
@@ -16,22 +16,24 @@ export const BRACKET_CLOSE    = 'BRACKET_CLOSE';
 export const PAREN_OPEN  = 'PAREN_OPEN';
 export const PAREN_CLOSE = 'PAREN_CLOSE';
 
-export const isBlockOpen  = is(BLOCK_OPEN);
-export const isBlockClose = is(BLOCK_CLOSE);
-export const isElse       = is(ELSE);
-export const isInsertion  = is(INSERTION);
-export const isRawText    = is(RAW_TEXT);
-export const isIdentifier = is(IDENTIFIER);
-export const isLiteral    = is(LITERAL);
-export const isAssignment = is(ASSIGNMENT);
-export const isBracketOpen   = is(BRACKET_OPEN);
-export const isBracketClose  = is(BRACKET_CLOSE);
-export const isParenOpen   = is(PAREN_OPEN);
-export const isParenClose  = is(PAREN_CLOSE);
+export const isBlockOpen     = tis(BLOCK_OPEN);
+export const isBlockClose    = tis(BLOCK_CLOSE);
+export const isElse          = tis(ELSE);
+export const isInsertion     = tis(INSERTION);
+export const isRawText       = tis(RAW_TEXT);
+export const isIdentifier    = tis(IDENTIFIER);
+export const isLiteral       = tis(LITERAL);
+export const isAssignment    = tis(ASSIGNMENT);
+export const isBracketOpen   = tis(BRACKET_OPEN);
+export const isBracketClose  = tis(BRACKET_CLOSE);
+export const isParenOpen     = tis(PAREN_OPEN);
+export const isParenClose    = tis(PAREN_CLOSE);
 
 const MISSING = '{!MISSING!}';
 
-class Node {}
+class Node {
+	evaluate () { return null; }
+}
 
 export class Text extends Node {
 	constructor ({ value }) {
@@ -56,16 +58,18 @@ export class Block extends Node {
 
 	evaluate (scope, env = {}) {
 		const fn = this.left && this.left.length && (
-			(subscope) => render(this.left, subscope, env)
+			(subscope, e = env) => render(this.left, subscope, e)
 		);
 
 		const inverse = this.right && this.right.length && (
-			(subscope) => render(this.right, subscope, env)
+			(subscope, e = env) => render(this.right, subscope, e)
 		);
+
+		const children = this.left && this.left.length ? this.left : null;
 
 		if (!this.invoker) return makeSafe(fn && fn(scope) || undefined);
 
-		return makeSafe(this.invoker.evaluate(scope, env, { fn, inverse }));
+		return makeSafe(this.invoker.evaluate(scope, env, { fn, inverse, children }));
 	}
 }
 
@@ -77,27 +81,41 @@ export class Invocation extends Node {
 		this.hash = props.hash || {};
 	}
 
-	evaluate (scope, env = {}, { fn, inverse }) {
+	evaluate (scope, env = {}, { fn, inverse, children }) {
 		if (!this.arguments.length) return ''; // this shouldn't happen
 		let [ target, ...args ] = this.arguments;
 		target = target.evaluate(scope, env);
 
-		if (!isFunctionType(target)) {
-			if (target && fn) return fn(scope);
-			if (!target && inverse) return inverse(scope);
-			if (fn && inverse) return target ? fn(scope) : inverse(scope);
+		const hash = this.hashCount ? mapValues(this.hash, (a) => deSafe(a.evaluate(scope, env))) : {};
+
+		if (target instanceof Node) {
+			const source = args.length ? args[0] : scope;
+			const frame = makeContext(source, env, { hash });
+			if (children) frame['@partial-block'] = new Block({ type: '@partial-block', left: children });
+			return target.evaluate(source, frame);
+		}
+
+		if (!isFunction(target)) {
+			if (target && fn) return fn(scope, env);
+			if (!target && inverse) return inverse(scope, env);
+			if (fn && inverse) return target ? fn(scope, env) : inverse(scope, env);
 			return target;
 		}
 
 		args = args.map((a) => deSafe(a.evaluate(scope, env)));
-		const hash = mapValues(this.hash, (a) => deSafe(a.evaluate(scope, env)));
-
 		return target(...args, {
 			data: scope,
+			env,
 			fn,
 			inverse,
 			hash,
 		});
+	}
+
+	set (key, value) {
+		this.hash[key] = value;
+		this.hashCount = (this.hashCount || 0) + 1;
+		return this;
 	}
 }
 

@@ -1,9 +1,8 @@
 
 import {
-	makeFrame,
+	makeContext,
+	safeJoin,
 	truthy,
-	map,
-	isNotUndefinedOrNull,
 	sizeOf,
 	get,
 	has,
@@ -13,8 +12,9 @@ import {
 
 const helpers = {};
 
-helpers.get = get;
-helpers.count = sizeOf;
+helpers.get = helpers.lookup = (...args) => get(...args.slice(0, -1));
+
+helpers.count = (...args) => sizeOf(...args.slice(0, -1));
 
 helpers.log = (...args) => {
 	args.pop();
@@ -29,7 +29,7 @@ helpers.if = (...args) => {
 	return result ? fn(data) : inverse(data);
 };
 
-helpers.not = (...args) => {
+helpers.not = helpers.unless = (...args) => {
 	const { data, fn, inverse } = args.pop();
 	const value = args.shift();
 	const result = !truthy(value);
@@ -52,6 +52,14 @@ helpers.is = (...args) => {
 	return result ? fn(data) : inverse(data);
 };
 
+helpers.isNot = (...args) => {
+	const { data, fn, inverse } = args.pop();
+	const value = args.shift();
+	const result = !args.includes(value);
+	if (!fn) return result || '';
+	return result ? fn(data) : inverse(data);
+};
+
 helpers.all = (...args) => {
 	const { data, fn, inverse } = args.pop();
 	const result = all(...args);
@@ -67,16 +75,17 @@ helpers.any = (...args) => {
 };
 
 helpers.with = (scope, ...args) => {
-	const { data, fn, inverse } = args.pop();
-	if (!fn && !inverse) return;
-	const frame = makeFrame(data);
+	const { env, fn, inverse, hash } = args.pop();
+	if (!fn && !inverse) return '';
+	if (!args.length) return '';
+	const frame = makeContext(args[0], env, { hash });
 	return truthy(scope) ? fn(frame) : inverse(frame);
 };
 
 helpers.each = (collection, ...args) => {
-	const { data, fn, inverse } = args.pop();
+	const { env, fn, inverse, hash } = args.pop();
 	if (!fn && !inverse) return;
-	const frame = makeFrame(data);
+
 	const c = sizeOf(collection);
 
 	if (!c) {
@@ -84,17 +93,18 @@ helpers.each = (collection, ...args) => {
 		return '';
 	}
 
-	if (!fn) return '';
+	if (!fn) return safeJoin(collection);
 
-	return map(collection, (value, key, index) => {
+	const frame = makeContext(collection, env, { hash });
+	return safeJoin(collection, (value, key, index) => {
 		frame.this = value;
 		frame['@value'] = value;
 		frame['@key'] = key;
 		frame['@index'] = index;
 		frame['@first'] = index === 0;
 		frame['@last'] = index === c - 1;
-		return fn(frame);
-	}).filter(isNotUndefinedOrNull).join('');
+		return fn(value, frame);
+	});
 };
 
 

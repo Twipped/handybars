@@ -12,7 +12,7 @@ import {
 } from '../src/taxonomy';
 
 tap.test('lex', (t) => {
-	const result = lex('a\nb{{c}}d{{#e}}{{f.g ["h" 2]}}i{{/e}}k{{l (m)}}n');
+	const result = lex('a\nb{{c}}d{{#e}}{{f.g z=6.4 ["h" 2]}}i{{/e}}k{{l (m)}}n');
 
 	const expected = new Block({
 		type: 'ROOT',
@@ -34,13 +34,17 @@ tap.test('lex', (t) => {
 				left: [
 					new Block({
 						type: 'f.g',
-						invoker: new Invocation({ arguments: [
-							new Identifier('f.g', true),
-							new Collection([
-								new Literal('h'),
-								new Literal(2),
-							]),
-						] }),
+						invoker: new Invocation({
+							arguments: [
+								new Identifier('f.g', true),
+								new Collection([
+									new Literal('h'),
+									new Literal(2),
+								]),
+							],
+							hash: { z: new Literal(6.4) },
+							hashCount: 1,
+						}),
 					}),
 					new Text({ value: 'i' }),
 				],

@@ -1,6 +1,6 @@
 
 import tokenizer from './tokenizer';
-import { wtf, v, isUndefined, isStringType } from './utils';
+import { wtf, isUndefined, isString } from './utils';
 
 import {
 	BLOCK_OPEN,
@@ -76,8 +76,8 @@ export const tokenizeArguments = tokenizer()
 		LITERAL,
 		Number(match[0]),
 	])
-	.rule(/([a-zA-Z][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
-	.rule(/([a-zA-Z][\w.$_]*)(\[?)/, (match) => {
+	.rule(/([a-zA-Z@][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
+	.rule(/([a-zA-Z@][\w.$_]*)(\[?)/, (match) => {
 		if (match[2]) return [ IDENTIFIER, match[1], { BRACKET_OPEN } ];
 		return [ IDENTIFIER, match[1] ];
 	})
@@ -118,7 +118,7 @@ export default function lex (input) {
 			if (tokType === BLOCK_CLOSE) {
 				const [ closeTarget ] = tokValue;
 				if (!isIdentifier(closeTarget)) wtf('Invalid block type: ' + closeTarget[1]);
-				if (v(closeTarget) !== block.type) wtf('Mismatching block closure: ' + closeTarget[1]);
+				if (closeTarget[1] !== block.type) wtf('Mismatching block closure: ' + closeTarget[1]);
 				return block;
 			}
 
@@ -133,7 +133,7 @@ export default function lex (input) {
 			if (tokType === INSERTION) {
 				const [ openTarget ] = tokValue;
 				children.push(new Block({
-					type: v(openTarget),
+					type: openTarget[1],
 					invoker: lexArguments(tokValue),
 					...tokOptions,
 				}));
@@ -156,7 +156,7 @@ export function lexArguments (input) {
 	const tokens = [ ...input ];
 
 	function peek (type, delta) {
-		if (isUndefined(type) || (isStringType(type) && isUndefined(delta))) delta = 1;
+		if (isUndefined(type) || (isString(type) && isUndefined(delta))) delta = 1;
 		const tok = tokens[Math.max(0, delta - 1)];
 		if (type && tok[0] !== type) return null;
 		return tok;
@@ -244,13 +244,13 @@ export function lexArguments (input) {
 			if (tokType === IDENTIFIER) {
 				if (tokOptions && tokOptions[BRACKET_OPEN]) {
 					if (assigning) {
-						invocation.hash[assigning] = descendCompoundIdent(tokValue);
+						invocation.set(assigning, descendCompoundIdent(tokValue));
 						assigning = false;
 					} else {
 						children.push(descendCompoundIdent(tokValue));
 					}
 				} else if (assigning) {
-					invocation.hash[assigning] = new Identifier(tokValue);
+					invocation.set(assigning, new Identifier(tokValue));
 					assigning = false;
 				} else {
 					children.push(new Identifier(tokValue));
@@ -263,7 +263,7 @@ export function lexArguments (input) {
 
 			if (tokType === PAREN_OPEN) {
 				if (assigning) {
-					invocation.hash[assigning] = descendInvocation(true);
+					invocation.set(assigning, descendInvocation(true));
 					assigning = false;
 				} else {
 					children.push(descendInvocation(true));
@@ -273,7 +273,7 @@ export function lexArguments (input) {
 
 			if (tokType === LITERAL) {
 				if (assigning) {
-					invocation.hash[assigning] = new Literal(tokValue);
+					invocation.set(assigning, new Literal(tokValue));
 					assigning = false;
 				} else {
 					children.push(new Literal(tokValue));
@@ -283,7 +283,7 @@ export function lexArguments (input) {
 
 			if (tokType === BRACKET_OPEN) {
 				if (assigning) {
-					invocation.hash[assigning] = descendCollection();
+					invocation.set(assigning, descendCollection());
 					assigning = false;
 				} else {
 					children.push(descendCollection());

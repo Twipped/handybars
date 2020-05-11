@@ -1,6 +1,6 @@
 {
   "name": "handybars",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A light-weight templating engine inspired by Handlebars",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -10,7 +10,7 @@
     "exe": "babel-node --presets @babel/env",
     "lint": "eslint './{src,tests}/**/*.{js,jsx}' --fix",
     "build": "rollup -c",
-    "clean": "rm -rf ./dist"
+    "clean": "rm -rf ./dist ./.nyc_output"
   },
   "engines": {
     "node": ">=10.13.0"
@@ -36,7 +36,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "util.js"
   ],
   "dependencies": {}
 }
