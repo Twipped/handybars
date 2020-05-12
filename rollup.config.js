@@ -10,11 +10,11 @@ const bannerConfig = {
 
 export default [
 	{
-		input: 'src/index.js',
+		input: 'src/dist.js',
 		output: {
 			file: 'dist/index.cjs.js',
 			format: 'cjs',
-			exports: 'named',
+			exports: 'default',
 		},
 		plugins: [
 			resolve(),
@@ -54,7 +54,7 @@ export default [
 		],
 	},
 	{
-		input: 'src/index.js',
+		input: 'src/dist.js',
 		output: {
 			name: 'MiniHandle',
 			file: 'dist/browser.js',
@@ -74,7 +74,7 @@ export default [
 		],
 	},
 	{
-		input: 'src/index.js',
+		input: 'src/dist.js',
 		output: {
 			name: 'MiniHandle',
 			file: 'dist/browser.min.js',

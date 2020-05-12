@@ -1,6 +1,4 @@
 
-export * as All from './kit';
-
 import {
 	log,
 	if as _if,
@@ -28,7 +26,3 @@ const helpers = {
 };
 
 export default helpers;
-
-export {
-	helpers as Default,
-};

@@ -10,7 +10,7 @@
     "exe": "babel-node --presets @babel/env",
     "lint": "eslint './{src,tests}/**/*.{js,jsx}' --fix",
     "build": "rollup -c",
-    "clean": "rm -rf ./dist ./.nyc_output"
+    "clean": "rm -rf ./dist ./.nyc_output ./util.js"
   },
   "engines": {
     "node": ">=10.13.0"
@@ -38,7 +38,8 @@
   "files": [
     "dist",
     "src",
-    "util.js"
+    "util.js",
+    "kit.js"
   ],
   "dependencies": {}
 }
