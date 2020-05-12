@@ -101,3 +101,58 @@ tap.test('lex else', (t) => {
 	t.deepEqual(result, expected);
 	t.end();
 });
+
+tap.test('empty block', (t) => {
+	const result = lex('{{#if a}}{{/if}}');
+
+	const expected = new Block({
+		type: 'ROOT',
+		invoker: null,
+		left: [
+			new Block({
+				type: 'if',
+				invoker: new Invocation({
+					arguments: [
+						new Identifier('if', true),
+						new Identifier('a'),
+					],
+				}),
+				left: [
+					new Text({ value: '' }),
+				],
+			}),
+		],
+	});
+
+	t.deepEqual(result, expected);
+	t.end();
+});
+
+tap.test('empty block w/ else', (t) => {
+	const result = lex('{{#if a}}{{else}}{{/if}}');
+
+	const expected = new Block({
+		type: 'ROOT',
+		invoker: null,
+		left: [
+			new Block({
+				type: 'if',
+				invoker: new Invocation({
+					arguments: [
+						new Identifier('if', true),
+						new Identifier('a'),
+					],
+				}),
+				left: [
+					new Text({ value: '' }),
+				],
+				right: [
+					new Text({ value: '' }),
+				],
+			}),
+		],
+	});
+
+	t.deepEqual(result, expected);
+	t.end();
+});

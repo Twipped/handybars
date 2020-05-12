@@ -119,6 +119,7 @@ export default function lex (input) {
 				const [ closeTarget ] = tokValue;
 				if (!isIdentifier(closeTarget)) wtf('Invalid block type: ' + closeTarget[1]);
 				if (closeTarget[1] !== block.type) wtf('Mismatching block closure: ' + closeTarget[1]);
+				if (!children.length) children.push(new Text());
 				return block;
 			}
 
@@ -140,6 +141,7 @@ export default function lex (input) {
 			}
 
 			if (tokType === ELSE) {
+				if (!children.length) children.push(new Text());
 				children = block.right = [];
 				continue;
 			}
