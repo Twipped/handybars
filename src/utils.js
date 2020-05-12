@@ -21,7 +21,7 @@ export function makeContext (scope, env, { hash = null } = {}) {
 	frame['@env'] = frame;
 	frame['@value'] = scope;
 	frame['@parent'] = env;
-	frame['@root'] = env['@root'] || env;
+	frame['@root'] = env['@root'] || frame;
 
 	return frame;
 }
