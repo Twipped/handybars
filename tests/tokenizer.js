@@ -118,3 +118,25 @@ tap.test('tokenize else', (t) => {
 	t.end();
 });
 
+tap.test('tokenize smallblock', (t) => {
+	const result = tokenize('{{#if a}}{{log}}{{else}}{{{c}}}{{/if}}');
+
+	t.deepEqual(result, [
+		BLOCK_OPEN(
+			IDENTIFIER('if'),
+			IDENTIFIER('a'),
+		),
+		INSERTION(
+			IDENTIFIER('log'),
+		),
+		ELSE(),
+		RAW_INSERTION(
+			IDENTIFIER('c'),
+		),
+		BLOCK_CLOSE(
+			IDENTIFIER('if'),
+		),
+	]);
+	t.end();
+});
+

@@ -1,5 +1,5 @@
 
-minihandle
+Handybars
 
 Copyright (c) 2020, Jocelyn Badgley
 

@@ -1,5 +1,5 @@
 
-export default function tokenizer () {
+export default function tokenizer (name) {
 
 	const rules = [];
 
@@ -15,7 +15,10 @@ export default function tokenizer () {
 		let pos = 0;
 		while (pos < len) {
 			const t = test(input.slice(pos));
-			if (!t) throw new Error(`Could not parse template, unknown token "${input.substring(pos, 100)}"" (${pos})`);
+			if (!t) {
+				console.error({ tokens });
+				throw new Error(`${name} Tokenizer: Could not parse template, unknown token "${input.substring(pos, 100)}"" (${pos})`);
+			}
 
 			const [ r, match ] = t;
 			pos += match[0].length;

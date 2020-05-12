@@ -12,7 +12,7 @@ export default [
 	{
 		input: 'src/index.js',
 		output: {
-			file: 'dist/index.js',
+			file: 'dist/index.cjs.js',
 			format: 'cjs',
 			exports: 'named',
 		},
@@ -96,6 +96,97 @@ export default [
 			banner(bannerConfig),
 		],
 	},
+
+	{
+		input: 'src/kit.js',
+		output: {
+			file: 'dist/kit.cjs.js',
+			format: 'cjs',
+			exports: 'named',
+		},
+		plugins: [
+			resolve(),
+			banner(bannerConfig),
+		],
+	},
+	{
+		input: 'src/kit.js',
+		output: {
+			file: 'dist/kit.esm.js',
+			format: 'esm',
+		},
+		plugins: [
+			resolve(),
+			banner(bannerConfig),
+		],
+	},
+	{
+		input: 'src/kit.js',
+		output: {
+			file: 'dist/kit.esm.min.js',
+			format: 'esm',
+		},
+		plugins: [
+			resolve(),
+			terser({
+				output: {
+					comments: false,
+				},
+				compress: {
+					ecma: 2018,
+					keep_classnames: true,
+					module: true,
+				},
+			}),
+			banner(bannerConfig),
+		],
+	},
+	{
+		input: 'src/kit.js',
+		output: {
+			name: 'MiniHandle',
+			file: 'dist/kit.browser.js',
+			format: 'umd',
+			exports: 'named',
+			compact: true,
+		},
+		plugins: [
+			resolve(),
+			babel({
+				exclude: 'node_modules/**',
+				presets: [
+					'@babel/env',
+				],
+			}),
+			banner(bannerConfig),
+		],
+	},
+	{
+		input: 'src/kit.js',
+		output: {
+			name: 'MiniHandle',
+			file: 'dist/kit.browser.min.js',
+			format: 'umd',
+			exports: 'named',
+			compact: true,
+		},
+		plugins: [
+			resolve(),
+			babel({
+				exclude: 'node_modules/**',
+				presets: [
+					'@babel/env',
+				],
+			}),
+			terser({ output: {
+				comments: false,
+			} }),
+			banner(bannerConfig),
+		],
+	},
+
+
+
 	{
 		input: 'src/utils.js',
 		output: {

@@ -1,5 +1,5 @@
 
-import { tis, get, wtf, isFunction, makeSafe, deSafe, mapValues, makeContext } from './utils';
+import { tis, get, wtf, isFunction, isUndefinedOrNull, makeSafe, deSafe, mapValues, makeContext, MISSING } from './utils';
 
 export const BLOCK_OPEN  = 'BLOCK_OPEN';
 export const BLOCK_CLOSE = 'BLOCK_CLOSE';
@@ -29,14 +29,12 @@ export const isBracketClose  = tis(BRACKET_CLOSE);
 export const isParenOpen     = tis(PAREN_OPEN);
 export const isParenClose    = tis(PAREN_CLOSE);
 
-const MISSING = '{!MISSING!}';
-
-class Node {
+export class Node {
 	evaluate () { return null; }
 }
 
 export class Text extends Node {
-	constructor ({ value }) {
+	constructor ({ value = '' } = {}) {
 		super();
 		this.value = value;
 	}
@@ -58,18 +56,21 @@ export class Block extends Node {
 
 	evaluate (scope, env = {}) {
 		const fn = this.left && this.left.length && (
-			(subscope, e = env) => render(this.left, subscope, e)
+			(subscope = scope, e = env) => render(this.left, subscope, subscope === scope ? e : makeContext(subscope, e))
 		);
 
 		const inverse = this.right && this.right.length && (
-			(subscope, e = env) => render(this.right, subscope, e)
+			(subscope = scope, e = env) => render(this.right, subscope, subscope === scope ? e : makeContext(subscope, e))
 		);
 
 		const children = this.left && this.left.length ? this.left : null;
 
-		if (!this.invoker) return makeSafe(fn && fn(scope) || undefined);
+		var result = this.invoker
+			? this.invoker.evaluate(scope, env, { fn, inverse, children })
+			: fn && fn(scope) || undefined
+		;
 
-		return makeSafe(this.invoker.evaluate(scope, env, { fn, inverse, children }));
+		return this.raw ? { value: deSafe(result) } : makeSafe(result);
 	}
 }
 
@@ -104,11 +105,13 @@ export class Invocation extends Node {
 
 		args = args.map((a) => deSafe(a.evaluate(scope, env)));
 		return target(...args, {
-			data: scope,
+			scope,
 			env,
 			fn,
 			inverse,
+			arguments: args,
 			hash,
+			resolve: (what) => resolve(what, scope, env),
 		});
 	}
 
@@ -179,7 +182,7 @@ export class Literal extends Node {
 	}
 
 	evaluate () {
-		return makeSafe(this.value);
+		return this.value;
 	}
 }
 
@@ -200,8 +203,8 @@ function resolve (what, scope, env, needed = false) {
 
 	let target;
 	if (
-		(target = get(scope, what, MISSING)) === MISSING &&
-		(target = get(env, what, MISSING)) === MISSING
+		(isUndefinedOrNull(scope) || (target = get(scope, what, MISSING)) === MISSING) &&
+		(isUndefinedOrNull(env) || (target = get(env, what, MISSING)) === MISSING)
 	) {
 		if (needed) wtf(`Could not resolve "${what}"`);
 		return;

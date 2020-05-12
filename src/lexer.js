@@ -29,7 +29,7 @@ import {
 	Collection,
 } from './taxonomy';
 
-export const tokenize = tokenizer()
+export const tokenize = tokenizer('Blocks')
 	.rule(/{{else}}/, () => [
 		ELSE,
 	])
@@ -41,12 +41,12 @@ export const tokenize = tokenizer()
 		BLOCK_CLOSE,
 		tokenizeArguments(match[1]),
 	])
-	.rule(/{{{([^#/]+)}}}/, (match) => [
+	.rule(/{{{([^#/]+?)}}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 		{ raw: true },
 	])
-	.rule(/{{([^#/]+)}}/, (match) => [
+	.rule(/{{([^#/]+?)}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 	])
@@ -56,7 +56,7 @@ export const tokenize = tokenizer()
 	])
 ;
 
-export const tokenizeArguments = tokenizer()
+export const tokenizeArguments = tokenizer('Arguments')
 	.rule(/\s+/) // WHITE SPACE
 	.rule(/]\[/,  () => [ BRACKET_CONTINUE ])
 	.rule(/]\./,  () => [ BRACKET_APPEND ])

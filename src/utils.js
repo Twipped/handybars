@@ -1,6 +1,8 @@
 
 export { default as slugify } from './slugify';
 
+export const MISSING = '{!MISSING!}';
+
 // htmlEscape copied from Sindre Sorhus' escape-goat
 export const htmlEscape = (input) => input
 	.replace(/&/g, '&amp;')
@@ -10,7 +12,7 @@ export const htmlEscape = (input) => input
 	.replace(/>/g, '&gt;');
 
 
-export function makeContext (scope, env, { hash = null }) {
+export function makeContext (scope, env, { hash = null } = {}) {
 	const frame = env ? Object.create(env) : {};
 
 	if (hash) Object.assign(frame, hash);
@@ -19,25 +21,39 @@ export function makeContext (scope, env, { hash = null }) {
 	frame['@env'] = frame;
 	frame['@value'] = scope;
 	frame['@parent'] = env;
-	frame['@root'] = env['@root'];
+	frame['@root'] = env['@root'] || env;
 
 	return frame;
 }
 
+export function contextIterate (input, env, fn, hash) {
+	var frame = makeContext(input, env, { hash });
+	const c = sizeOf(input);
+	return safeJoin(input, (value, key, index) => {
+		frame.this = value;
+		frame['@value'] = value;
+		frame['@key'] = key;
+		frame['@index'] = index;
+		frame['@first'] = index === 0;
+		frame['@last'] = index === c - 1;
+		return fn(value, frame);
+	});
+}
+
 export function makeSafe (input) {
-	if (isUndefinedOrNull(input)) return { value: '' };
+	if (isUndefinedOrNull(input) || isFalse(input)) return { value: '' };
 	if (isString(input)) {
 		return { value: input && htmlEscape(input) };
 	}
 	if (isObject(input) && hasOwn(input, 'value')) {
 		return { value: input.value };
 	}
-	return { value: '' };
+	return { value: input };
 }
 
-export function safeJoin (inputs, predicate) {
+export function safeJoin (inputs, predicate, delimiter = '') {
 	predicate = iteratee(predicate);
-	return { value: map(inputs, (val, k, i) => makeSafe(predicate(val, k, i)).value).join('') };
+	return { value: map(inputs, (val, k, i) => makeSafe(predicate(val, k, i)).value).join(delimiter) };
 }
 
 export function deSafe (input) {
@@ -48,7 +64,7 @@ export function deSafe (input) {
 	if (isObject(input) && hasOwn(input, 'value')) {
 		return input.value;
 	}
-	return '';
+	return input;
 }
 
 export function tis (type, value) {
@@ -118,8 +134,10 @@ export function isMap           (input) { return input instanceof Map; }
 export function isSet           (input) { return input instanceof Set; }
 export function isDate          (input) { return input instanceof Date; }
 export function isRegExp        (input) { return input instanceof RegExp; }
+export function isTrue          (input) { return input === true; }
 export function isTruthy        (input) { return !!input; }
 export function isFalsey        (input) { return  !input; }
+export function isFalse         (input) { return input === false; }
 export const isArray = Array.isArray;
 
 export function isPrimitive (input) {
@@ -226,12 +244,16 @@ export function truthy (value) {
 	return !!value;
 }
 
+export function falsey (value) {
+	return !truthy(value);
+}
+
 export function hasOwn (obj, key) {
 	return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
 export function lc (str) {
-	return isString(uc) ? str.toLowerCase() : str;
+	return isString(str) ? str.toLowerCase() : str;
 }
 
 export function uc (str) {
@@ -533,7 +555,7 @@ export function anyBy (collection, predicate = null) {
 }
 
 export function iteratee (match) {
-	if (isUndefined(match) || match === null) return Boolean;
+	if (isUndefinedOrNull(match)) return (v) => v;
 
 	if (isFunction(match)) return match;
 

@@ -44,7 +44,8 @@ export default function Handybars (template, world = {}) {
 	const env = { ...DefaultHelpers, ...world };
 
 	function execute (scope) {
-		return ast.evaluate(scope, env).value;
+		const frame = makeContext(scope, env);
+		return ast.evaluate(scope, frame).value;
 	}
 
 	execute.set = (...args) => {
