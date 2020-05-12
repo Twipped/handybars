@@ -89,7 +89,7 @@ export class Invocation extends Node {
 
 		const hash = this.hashCount ? mapValues(this.hash, (a) => safe.down(a.evaluate(scope, env))) : {};
 
-		if (target instanceof Node) {
+		if (target && isFunction(target.evaluate)) {
 			const source = args.length ? args[0] : scope;
 			const frame = makeContext(source, env, { hash });
 			if (children) frame['@partial-block'] = new Block({ type: '@partial-block', left: children });

@@ -1,8 +1,5 @@
 
-import { makeContext, safe } from '../utils';
-import {
-	Node,
-} from '../taxonomy';
+import { makeContext, isFunction, safe, wtf } from '../utils';
 
 /**
  * Defines collection of layout cells to be filled into a layout partial. This function wraps a
@@ -37,13 +34,15 @@ export default function extend (...args) {
 		fn();
 	}
 
-	if (template instanceof Node) {
+	if (isFunction(template.evaluate)) {
 		const source = args.length ? args[0] : scope;
 		const frame = makeContext(source, env, { hash });
 		return template.evaluate(source, frame);
 	}
 
-	return safe.up(template(options));
+	if (isFunction(template)) return safe.up(template(options));
+	console.error({ template });
+	wtf('Layout is not a partial or a function.');
 }
 /***/
 
