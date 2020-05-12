@@ -41,12 +41,12 @@ export const tokenize = tokenizer('Blocks')
 		BLOCK_CLOSE,
 		tokenizeArguments(match[1]),
 	])
-	.rule(/{{{([^#/]+?)}}}/, (match) => [
+	.rule(/{{{([^#/].*?)}}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 		{ raw: true },
 	])
-	.rule(/{{([^#/]+?)}}/, (match) => [
+	.rule(/{{([^#/].*?)}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 	])
