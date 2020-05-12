@@ -40,31 +40,39 @@ export function contextIterate (input, env, fn, hash) {
 	});
 }
 
-export function makeSafe (input) {
-	if (isUndefinedOrNull(input) || isFalse(input)) return { value: '' };
+export const SAFE_NONE = 0;
+export const SAFE_WRAPPED = 1;
+export const SAFE_ESCAPED = 2;
+
+export function safe (input, level = SAFE_WRAPPED) {
+	if (isUndefinedOrNull(input) || isFalse(input)) {
+		if (level === SAFE_NONE) return input;
+		return { value: '', safety: level };
+	}
 	if (isString(input)) {
-		return { value: input && htmlEscape(input) };
+		if (level === SAFE_NONE) return input;
+		if (level === SAFE_WRAPPED) return { value: input, safety: level };
+		if (level === SAFE_ESCAPED) return { value: input && htmlEscape(input) };
 	}
 	if (isObject(input) && hasOwn(input, 'value')) {
-		return { value: input.value };
+		if (level === SAFE_NONE) return input.value;
+		return { value: input.value, safety: level };
 	}
-	return { value: input };
+
+	if (level === SAFE_NONE) return input;
+	return { value: input, safety: level };
 }
+
+safe.NONE    = SAFE_ESCAPED;
+safe.WRAPPED = SAFE_WRAPPED;
+safe.ESCAPED = SAFE_ESCAPED;
+
+safe.down = (input) => safe(input, SAFE_NONE);
+safe.up   = (input) => safe(input, SAFE_ESCAPED);
 
 export function safeJoin (inputs, predicate, delimiter = '') {
 	predicate = iteratee(predicate);
-	return { value: map(inputs, (val, k, i) => makeSafe(predicate(val, k, i)).value).join(delimiter) };
-}
-
-export function deSafe (input) {
-	if (isUndefinedOrNull(input)) return '';
-	if (isString(input)) {
-		return input;
-	}
-	if (isObject(input) && hasOwn(input, 'value')) {
-		return input.value;
-	}
-	return input;
+	return { value: map(inputs, (val, k, i) => safe.up(predicate(val, k, i)).value).join(delimiter) };
 }
 
 export function tis (type, value) {

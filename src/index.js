@@ -1,6 +1,6 @@
 
 import lexer from './lexer';
-import { isString, wtf, isObject, set, makeContext, makeSafe, safeJoin } from './utils';
+import { isString, wtf, isObject, set, makeContext, safe, safeJoin } from './utils';
 import {
 	Text,
 	Block,
@@ -35,7 +35,7 @@ export {
 	Identifier,
 	Literal,
 	makeContext,
-	makeSafe,
+	safe,
 	safeJoin,
 };
 
@@ -61,17 +61,3 @@ export default function Handybars (template, world = {}) {
 
 	return execute;
 }
-
-Object.assign(Handybars, {
-	parse,
-	evaluate,
-	Text,
-	Block,
-	Invocation,
-	Collection,
-	Identifier,
-	Literal,
-	makeContext,
-	makeSafe,
-	safeJoin,
-});

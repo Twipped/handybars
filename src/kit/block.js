@@ -1,5 +1,5 @@
 
-import { deSafe } from '../utils';
+import { safe } from '../utils';
 
 /**
  * Defines a pluggable content block in a layout partial
@@ -27,8 +27,8 @@ export default function block (...args) {
 
 	var target = root._blocks[name];
 
-	const fn = options.fn ? () => deSafe(options.fn()) : () => '';
-	const tfn = target && target.fn ? () => deSafe(target.fn()) : () => '';
+	const fn = options.fn ? () => safe.down(options.fn()) : () => '';
+	const tfn = target && target.fn ? () => safe.down(target.fn()) : () => '';
 
 	var result;
 	switch (target && target.fn && target.mode) {

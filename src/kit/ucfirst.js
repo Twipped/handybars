@@ -1,5 +1,5 @@
 
-import { ucfirst as uc, deSafe } from '../utils';
+import { ucfirst as uc, safe } from '../utils';
 
 
 /**
@@ -17,10 +17,10 @@ import { ucfirst as uc, deSafe } from '../utils';
 export default function ucfirst (...args) {
 	const { fn } = args.pop();
 
-	if (fn) return uc(deSafe(fn()));
+	if (fn) return uc(safe.down(fn()));
 
 	if (args.length) {
-		return uc(deSafe(args[0]));
+		return uc(safe.down(args[0]));
 	}
 
 	throw new Error('Handlebars Helper "ucfirst" needs 1 parameter minimum if not used as a block helper');

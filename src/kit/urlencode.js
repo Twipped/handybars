@@ -1,5 +1,5 @@
 
-import { deSafe } from '../utils';
+import { safe } from '../utils';
 
 /**
  * Encodes a string into a URL safe format that can be decoded.
@@ -16,7 +16,7 @@ import { deSafe } from '../utils';
 export default function urlencode (...args) {
 	const { fn } = args.pop();
 
-	if (fn) return encodeURIComponent(deSafe(fn()));
+	if (fn) return encodeURIComponent(safe.down(fn()));
 
 	if (args.length) {
 		return encodeURIComponent(args[0]);

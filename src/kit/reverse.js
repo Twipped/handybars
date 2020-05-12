@@ -1,5 +1,5 @@
 
-import { isString, isObject, isArray, isNumber, toPairs, fromPairs, deSafe } from '../utils';
+import { isString, isObject, isArray, isNumber, toPairs, fromPairs, safe } from '../utils';
 
 /**
  * Reverses the order of a string or array, negates an integer, or returns an object with the keys in reverse order
@@ -12,7 +12,7 @@ import { isString, isObject, isArray, isNumber, toPairs, fromPairs, deSafe } fro
  */
 export default function reverse (...args) {
 	const { fn } = args.pop();
-	const input = fn ? deSafe(fn(this)) : args[0];
+	const input = fn ? safe.down(fn(this)) : args[0];
 
 	if (isString(input)) {
 		return input.split('').reverse().join('');

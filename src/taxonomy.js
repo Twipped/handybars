@@ -1,5 +1,5 @@
 
-import { tis, get, wtf, isFunction, isUndefinedOrNull, makeSafe, deSafe, mapValues, makeContext, MISSING } from './utils';
+import { tis, get, wtf, isFunction, isUndefinedOrNull, safe, mapValues, makeContext, MISSING } from './utils';
 
 export const BLOCK_OPEN  = 'BLOCK_OPEN';
 export const BLOCK_CLOSE = 'BLOCK_CLOSE';
@@ -70,7 +70,7 @@ export class Block extends Node {
 			: fn && fn(scope) || undefined
 		;
 
-		return this.raw ? { value: deSafe(result) } : makeSafe(result);
+		return this.raw ? safe(result) : safe.up(result);
 	}
 }
 
@@ -87,7 +87,7 @@ export class Invocation extends Node {
 		let [ target, ...args ] = this.arguments;
 		target = target.evaluate(scope, env);
 
-		const hash = this.hashCount ? mapValues(this.hash, (a) => deSafe(a.evaluate(scope, env))) : {};
+		const hash = this.hashCount ? mapValues(this.hash, (a) => safe.down(a.evaluate(scope, env))) : {};
 
 		if (target instanceof Node) {
 			const source = args.length ? args[0] : scope;
@@ -103,7 +103,7 @@ export class Invocation extends Node {
 			return target;
 		}
 
-		args = args.map((a) => deSafe(a.evaluate(scope, env)));
+		args = args.map((a) => safe.down(a.evaluate(scope, env)));
 		return target(...args, {
 			scope,
 			env,
@@ -154,11 +154,11 @@ export class CompoundIdentifier extends Node {
 	}
 
 	evaluate (scope, env = {}) {
-		const refs = this.refs.map((spec) => deSafe(spec.evaluate(scope, env)));
+		const refs = this.refs.map((spec) => safe.down(spec.evaluate(scope, env)));
 		const path = this.path.map((spec) => {
 			if (spec.ref) return refs[spec.ref];
 			if (spec.evaluate) {
-				return deSafe(spec.evaluate(scope, env));
+				return safe.down(spec.evaluate(scope, env));
 			}
 			return null;
 		});
@@ -189,7 +189,7 @@ export class Literal extends Node {
 function render (children, scope, env) {
 	if (!Array.isArray(children) || !children.length) return '';
 	const value = children
-		.map((c) => makeSafe(c.evaluate(scope, env)))
+		.map((c) => safe.up(c.evaluate(scope, env)))
 		.filter((c) => c.value !== '')
 		.map((c) => c.value)
 		.join('');

@@ -1,5 +1,5 @@
 
-import { uc, deSafe } from '../utils';
+import { uc, safe } from '../utils';
 
 /**
  * Uppercase the a string or content block
@@ -16,10 +16,10 @@ import { uc, deSafe } from '../utils';
 export default function uppercase (...args) {
 	const { fn } = args.pop();
 
-	if (fn) return uc(deSafe(fn()));
+	if (fn) return uc(safe.down(fn()));
 
 	if (args.length) {
-		return uc(deSafe(args[0]));
+		return uc(safe.down(args[0]));
 	}
 
 	throw new Error('Helper "uppercase" needs 1 parameter minimum if not used as a block helper');

@@ -1,5 +1,5 @@
 
-import { ucsentence as uc, deSafe } from '../utils';
+import { ucsentence as uc, safe } from '../utils';
 
 
 /**
@@ -17,10 +17,10 @@ import { ucsentence as uc, deSafe } from '../utils';
 export default function ucsentences (...args) {
 	const { fn } = args.pop();
 
-	if (fn) return { value: uc(deSafe(fn())) };
+	if (fn) return { value: uc(safe.down(fn())) };
 
 	if (args.length) {
-		return uc(deSafe(args[0]));
+		return uc(safe.down(args[0]));
 	}
 
 	throw new Error('Handlebars Helper "ucsentences" needs 1 parameter minimum if not used as a block helper');

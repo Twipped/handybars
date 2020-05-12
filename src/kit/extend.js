@@ -1,5 +1,5 @@
 
-import { makeContext, makeSafe } from '../utils';
+import { makeContext, safe } from '../utils';
 import {
 	Node,
 } from '../taxonomy';
@@ -43,7 +43,7 @@ export default function extend (...args) {
 		return template.evaluate(source, frame);
 	}
 
-	return makeSafe(template(options));
+	return safe.up(template(options));
 }
 /***/
 

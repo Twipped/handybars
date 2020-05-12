@@ -1,5 +1,5 @@
 
-import { deSafe } from '../utils';
+import { safe } from '../utils';
 
 /**
  * Parses URI encoded string back into its original format
@@ -16,10 +16,10 @@ import { deSafe } from '../utils';
 export default function urldecode (...args) {
 	const { fn } = args.pop();
 
-	if (fn) return decodeURIComponent(deSafe(fn()));
+	if (fn) return decodeURIComponent(safe.down(fn()));
 
 	if (args.length) {
-		return decodeURIComponent(deSafe(args[0]));
+		return decodeURIComponent(safe.down(args[0]));
 	}
 
 	throw new Error('Handlebars Helper "urldecode" needs 1 parameter minimum if not used as a block helper');

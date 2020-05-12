@@ -1,5 +1,5 @@
 
-import { deSafe } from '../utils';
+import { safe } from '../utils';
 
 /**
  * Searches for a needle within a haystack and substitutes a replacement for all matchs.
@@ -16,7 +16,7 @@ import { deSafe } from '../utils';
 export default function replace (...args) {
 	const { fn } = args.pop();
 	let haystack;
-	if (fn) haystack = deSafe(fn());
+	if (fn) haystack = safe.down(fn());
 	else haystack = String(args.shift());
 
 	const needle = args[2] ? new RegExp(args[0]) : args[0];
