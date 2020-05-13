@@ -33,20 +33,20 @@ export const tokenize = tokenizer('Blocks')
 	.rule(/{{else}}/, () => [
 		ELSE,
 	])
-	.rule(/{{#(.+?)}}/, (match) => [
+	.rule(/{{#([\s\S]+?)}}/, (match) => [
 		BLOCK_OPEN,
 		tokenizeArguments(match[1]),
 	])
-	.rule(/{{\/(.+?)}}/, (match) => [
+	.rule(/{{\/([\s\S]+?)}}/, (match) => [
 		BLOCK_CLOSE,
 		tokenizeArguments(match[1]),
 	])
-	.rule(/{{{([^#/].*?)}}}/, (match) => [
+	.rule(/{{{([^#/][\s\S]*?)}}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 		{ raw: true },
 	])
-	.rule(/{{([^#/].*?)}}/, (match) => [
+	.rule(/{{([^#/][\s\S]*?)}}/, (match) => [
 		INSERTION,
 		tokenizeArguments(match[1]),
 	])
@@ -76,8 +76,8 @@ export const tokenizeArguments = tokenizer('Arguments')
 		LITERAL,
 		Number(match[0]),
 	])
-	.rule(/([a-zA-Z@][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
-	.rule(/([a-zA-Z@][\w.$_]*)(\[?)/, (match) => {
+	.rule(/([a-zA-Z@$_][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
+	.rule(/([a-zA-Z@$_][\w.$_]*)(\[?)/, (match) => {
 		if (match[2]) return [ IDENTIFIER, match[1], { BRACKET_OPEN } ];
 		return [ IDENTIFIER, match[1] ];
 	})

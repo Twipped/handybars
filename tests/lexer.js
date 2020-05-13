@@ -129,7 +129,7 @@ tap.test('empty block', (t) => {
 });
 
 tap.test('empty block w/ else', (t) => {
-	const result = lex('{{#if a}}{{else}}{{/if}}');
+	const result = lex('{{#if \na}}{{else}}{{/if}}');
 
 	const expected = new Block({
 		type: 'ROOT',
