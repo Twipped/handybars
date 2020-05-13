@@ -160,7 +160,7 @@ export function lexArguments (input) {
 	function peek (type, delta) {
 		if (isUndefined(type) || (isString(type) && isUndefined(delta))) delta = 1;
 		const tok = tokens[Math.max(0, delta - 1)];
-		if (type && tok[0] !== type) return null;
+		if (type && tok && tok[0] !== type) return null;
 		return tok;
 	}
 
@@ -229,7 +229,7 @@ export function lexArguments (input) {
 			wtf('Unexpected token: ' + tokType);
 		}
 
-		wtf('Unexpected end of token stream, unclosed compound identifier');
+		return ident;
 	}
 
 	function descendInvocation (embedded = false) {

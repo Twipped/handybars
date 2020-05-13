@@ -159,7 +159,7 @@ tap.test('empty block w/ else', (t) => {
 });
 
 tap.test('compound identifier', (t) => {
-	const result = lex('{{items["a"]}}{{#each ids}}{{items[this]}}{{/each}}');
+	const result = lex('{{items["a"]}}{{#each ids}}{{items[this].id}}{{/each}}');
 	const expected = new Block({
 		type: 'ROOT',
 		invoker: null,
@@ -182,7 +182,10 @@ tap.test('compound identifier', (t) => {
 					new Block({
 						type: 'items',
 						invoker: new Invocation({ arguments: [
-							new CompoundIdentifier('items', [ { r: new Identifier('this') } ]),
+							new CompoundIdentifier('items', [
+								{ r: new Identifier('this') },
+								new Identifier('id'),
+							]),
 						] }),
 					}),
 				],
