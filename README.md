@@ -1,7 +1,7 @@
 Handybars
 ===
 
-A light-weight micro templating engine inspired by Handlebars, but with several notable changes designed to make it more versatile and significantly smaller. Handybars is _not_ Handlebars compatible and cannot be used as a drop in replacement, but the syntax is very similar, with some notable changes.
+A micro templating engine inspired by Handlebars, but with several notable changes designed to make it more versatile and significantly smaller. Handybars is _not_ Handlebars compatible and cannot be used as a drop in replacement, but the syntax is very similar.
 
 Note, this project is very much a work in progress, the api and behavior can and will change.
 
@@ -13,12 +13,14 @@ Note, this project is very much a work in progress, the api and behavior can and
   - Use `handybars.partial(templateText)` (or `import { partial } from 'handybars'`) to parse a partial template.
   - Use `template.setPartial(name, templateText)` to add a partial to a template's environment scope.
 - There is currently no support for inline partials.
-- `../` does not exist. Instead, use `@parent.` to access the previous scope, and `@root` to access the top level scope.
+- `../` does not exist. Instead, use `@parent.` to access the previous scope. However, you may find you don't need this unless a local scope's keys collide with a parent scope's keys.
 - There is no built in whitespace control
 - Handybars does not support the `as` syntax, such as `{{#each users as | user |}}`
 - `{#each}` can iterate any Array, Set, Map or plain Object.
 - Blocks may contain arrays: `{{#each [ '1st' '2nd' '3rd' ]}}`
 - Blocks support inline value lookups: `{{order[request.id].creationDate}}`
+- Blocks do NOT support the `value.[N]` lookup syntax (note the period before the bracket)
+- The options object passed to helpers has a different structure.
 
 ### Usage
 
