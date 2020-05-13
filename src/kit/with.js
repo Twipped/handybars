@@ -18,7 +18,7 @@ export default function _with (...args) {
 	if (!args.length) return '';
 	const [ scope ] = args;
 	const frame = makeContext(scope, env, { hash });
-	return truthy(scope) ? fn(scope, frame) : inverse();
+	return truthy(scope) ? fn(scope, frame) : inverse && inverse();
 }
 /***/
 
