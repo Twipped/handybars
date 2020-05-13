@@ -93,7 +93,8 @@ export function tis (type, value) {
 	return (tok) => matchType(tok) && uc(tok[1]) === value;
 }
 
-export function wtf (msg) {
+export function wtf (msg, info) {
+	if (info) console.error(info);
 	throw new Error(msg);
 }
 

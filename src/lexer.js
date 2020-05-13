@@ -207,14 +207,14 @@ export function lexArguments (input) {
 				}
 
 				if (peek(IDENTIFIER) || peek(LITERAL)) {
-					wtf('Unexpected double identifier/literal inside compound identifier');
+					wtf('Unexpected double identifier/literal inside compound identifier', ident);
 				}
 				continue;
 			}
 
 			if (tokType === LITERAL) {
 				if (appending) {
-					wtf('Unexpected literal found appended to a compound identifier.');
+					wtf('Unexpected literal found appended to a compound identifier.', ident);
 				}
 
 				ident.pushTarget(new Literal(tokValue));
