@@ -9,6 +9,7 @@ import {
 	Literal,
 } from '../src/taxonomy';
 import Helpers from '../src/helpers';
+import { parse, makeContext } from '../src/index';
 
 tap.test('evaluate 1', (t) => {
 
@@ -130,6 +131,25 @@ tap.test('evaluate else', (t) => {
 			c: 'C',
 		}, Helpers).value,
 		'C',
+	);
+	t.end();
+});
+
+tap.test('nested lookup', (t) => {
+	const AST = parse('{{items["a"]}}{{#each ids}}{{items[this]}}{{/each}}');
+	const data = {
+		ids: [ 'a', 'b', 'c' ],
+		items: {
+			a: 1,
+			b: 2,
+			c: 3,
+		},
+	};
+	const env = makeContext(data, Helpers);
+
+	t.strictEqual(
+		AST.evaluate(data, env).value,
+		'1123',
 	);
 	t.end();
 });

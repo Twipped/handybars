@@ -9,6 +9,7 @@ import {
 	Collection,
 	Identifier,
 	Literal,
+	CompoundIdentifier,
 } from '../src/taxonomy';
 
 tap.test('lex', (t) => {
@@ -148,6 +149,42 @@ tap.test('empty block w/ else', (t) => {
 				],
 				right: [
 					new Text({ value: '' }),
+				],
+			}),
+		],
+	});
+
+	t.deepEqual(result, expected);
+	t.end();
+});
+
+tap.test('compound identifier', (t) => {
+	const result = lex('{{items["a"]}}{{#each ids}}{{items[this]}}{{/each}}');
+	const expected = new Block({
+		type: 'ROOT',
+		invoker: null,
+		left: [
+			new Block({
+				type: 'items',
+				invoker: new Invocation({ arguments: [
+					new CompoundIdentifier('items', [ new Literal('a') ]),
+				] }),
+			}),
+			new Block({
+				type: 'each',
+				invoker: new Invocation({
+					arguments: [
+						new Identifier('each', true),
+						new Identifier('ids'),
+					],
+				}),
+				left: [
+					new Block({
+						type: 'items',
+						invoker: new Invocation({ arguments: [
+							new CompoundIdentifier('items', [ { r: new Identifier('this') } ]),
+						] }),
+					}),
 				],
 			}),
 		],

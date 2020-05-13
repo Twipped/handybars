@@ -1,5 +1,5 @@
 
-import { tis, get, wtf, isFunction, isUndefinedOrNull, safe, mapValues, makeContext, MISSING } from './utils';
+import { tis, get, wtf, isPrimitive, isFunction, isUndefinedOrNull, safe, mapValues, makeContext, MISSING } from './utils';
 
 export const BLOCK_OPEN  = 'BLOCK_OPEN';
 export const BLOCK_CLOSE = 'BLOCK_CLOSE';
@@ -54,15 +54,17 @@ export class Block extends Node {
 		this.right = props.right || null;
 	}
 
+	_descender (tree, scope, env) {
+		if (!tree || !tree.length) return null;
+		return (subscope = scope, e = env) => {
+			if (e === env && subscope !== scope) e = makeContext(subscope, e);
+			return render(tree, subscope, e);
+		};
+	}
+
 	evaluate (scope, env = {}) {
-		const fn = this.left && this.left.length && (
-			(subscope = scope, e = env) => render(this.left, subscope, subscope === scope ? e : makeContext(subscope, e))
-		);
-
-		const inverse = this.right && this.right.length && (
-			(subscope = scope, e = env) => render(this.right, subscope, subscope === scope ? e : makeContext(subscope, e))
-		);
-
+		const fn = this._descender(this.left, scope, env);
+		const inverse = this._descender(this.right, scope, env);
 		const children = this.left && this.left.length ? this.left : null;
 
 		var result = this.invoker
@@ -82,7 +84,7 @@ export class Invocation extends Node {
 		this.hash = props.hash || {};
 	}
 
-	evaluate (scope, env = {}, { fn, inverse, children }) {
+	evaluate (scope, env = {}, { fn, inverse, children } = {}) {
 		if (!this.arguments.length) return ''; // this shouldn't happen
 		let [ target, ...args ] = this.arguments;
 		target = target.evaluate(scope, env);
@@ -146,23 +148,33 @@ export class Identifier extends Node {
 }
 
 export class CompoundIdentifier extends Node {
-	constructor (target, critical) {
+	constructor (target, args = [], critical = false) {
 		super();
 		this.path = target.split(/[,[\].]+?/).filter(Boolean).map((i) => new Identifier(i));
 		this.refs = [];
 		this.critical = critical;
+
+		for (const arg of args) {
+			if (arg.r) this.pushRef(arg.r);
+			else this.pushTarget(arg);
+		}
 	}
 
 	evaluate (scope, env = {}) {
-		const refs = this.refs.map((spec) => safe.down(spec.evaluate(scope, env)));
+		const refs = this.refs.map((spec) => safe.down(spec.evaluate(scope, env, this.critical)));
 		const path = this.path.map((spec) => {
-			if (spec.ref) return refs[spec.ref];
+			if (spec.ref !== undefined) return refs[spec.ref];
 			if (spec.evaluate) {
-				return safe.down(spec.evaluate(scope, env));
+				return safe.down(spec.evaluate(scope, env, this.critical));
 			}
 			return null;
 		});
-		return resolve(path, scope, env, this.critical);
+
+		const target = path.shift();
+		if (!target) return;
+
+		const result = get(target, path, MISSING);
+		return result === MISSING ? undefined : result;
 	}
 
 	pushRef (spec) {
@@ -202,15 +214,17 @@ function resolve (what, scope, env, needed = false) {
 	if (isIdentifier(what)) what = what[1];
 
 	let target;
-	if (
-		(isUndefinedOrNull(scope) || (target = get(scope, what, MISSING)) === MISSING) &&
-		(isUndefinedOrNull(env) || (target = get(env, what, MISSING)) === MISSING)
-	) {
-		if (needed) wtf(`Could not resolve "${what}"`);
-		return;
+	if (!isUndefinedOrNull(scope)  && !isPrimitive(scope) && (target = get(scope, what, MISSING)) !== MISSING) return target;
+	if (!isUndefinedOrNull(env)    && (target = get(env, what, MISSING)) !== MISSING) return target;
+
+	let parent = env;
+	while ((parent = parent['@parent'])) {
+		if (!isUndefinedOrNull(parent.this) && !isPrimitive(parent.this) && (target = get(parent.this, what, MISSING)) !== MISSING) return target;
+		if (!isUndefinedOrNull(parent)      && (target = get(parent, what, MISSING)) !== MISSING) return target;
 	}
 
-	return target;
+	if (needed) wtf(`Could not resolve "${what}"`);
+	return;
 }
 
 export default {
