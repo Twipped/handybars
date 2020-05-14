@@ -94,7 +94,7 @@ export function tis (type, value) {
 }
 
 export function wtf (msg, info) {
-	if (info) console.error(info);
+	if (info) console.error(info); // eslint-disable-line no-console
 	throw new Error(msg);
 }
 

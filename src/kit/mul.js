@@ -25,7 +25,7 @@ export default function mul (...args) {
 
 	const initial = args.shift();
 	return args.reduce((a, b) => a * b, initial);
-};
+}
 /***/
 
 

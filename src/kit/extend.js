@@ -41,8 +41,8 @@ export default function extend (...args) {
 	}
 
 	if (isFunction(template)) return safe.up(template(options));
-	console.error({ template });
-	wtf('Layout is not a partial or a function.');
+
+	wtf('Layout is not a partial or a function.', template);
 }
 /***/
 
