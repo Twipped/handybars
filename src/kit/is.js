@@ -2,6 +2,7 @@
 
 /**
  * Tests if the first argument matches any of the other arguments with strict equality.
+ *
  * @category logic,default
  *
  * @signature {{is value test1 ... testN}}
@@ -14,17 +15,11 @@
  */
 
 export default function is (...args) {
-	if (args.length < 3) {
-		throw new Error('Helper "is" needs a minimum of 2 arguments');
-	}
-
+	if (args.length < 3) throw new Error('Helper "is" needs a minimum of 2 arguments');
 	const { fn, inverse } = args.pop();
 	const value = args.shift();
-
-	var result = args.includes(value);
-
+	const result = args.includes(value);
 	if (!fn) return result || '';
-
 	return result ? fn(this) : inverse && inverse(this);
 }
 /***/

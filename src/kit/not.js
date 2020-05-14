@@ -2,12 +2,14 @@
 import { falsey } from '../utils';
 
 /**
- * Evaluates the block contents if the passed input is falsey.
+ * Evaluates the block contents of the passed input is falsey or equals a target.
  *
  * @category logic,default
  *
- * @signature {{#not input}}<TEMPLATE>[{{else}}<TEMPLATE>]{{/not}}
+ * @signature {{#not input [target]}}<TEMPLATE>[{{else}}<TEMPLATE>]{{/not}}
  * @example
+ * @param  {mixed} input Value to test.
+ * @param  {mixed} target Value to test against (strict equality). If omitted, helper will check if `input` is falsey.
  * // name = { first: 'John', last: 'Doe' }
  * {{#not name}}No Name Defined{{else}}<span>{{first}} {{last}}</span>{{/not}}
  * // Result: <span>John Doe</span>
@@ -15,7 +17,7 @@ import { falsey } from '../utils';
 export default function not (...args) {
 	const { scope, fn, inverse } = args.pop();
 	const value = args.shift();
-	const result = falsey(value);
+	const result = args.length ? value !== args[0] : falsey(value);
 	if (!fn) return result || '';
 	return result ? fn(scope) : inverse && inverse();
 }
