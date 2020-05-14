@@ -98,8 +98,8 @@ export function wtf (msg, info) {
 	throw new Error(msg);
 }
 
-export function isa (constructor) {
-	return (input) => input instanceof constructor;
+export function cl (...args) {
+	return args.flat().filter(Boolean).join(' ');
 }
 
 export function equals (value) {
@@ -147,6 +147,8 @@ export function isTrue          (input) { return input === true; }
 export function isTruthy        (input) { return !!input; }
 export function isFalsey        (input) { return  !input; }
 export function isFalse         (input) { return input === false; }
+export function isList (input) { return isArray(input) || isSet(input); }
+export function isDict (input) { return isObject(input) || isMap(input); }
 export const isArray = Array.isArray;
 
 export function isPrimitive (input) {
@@ -169,6 +171,9 @@ export function isObject (input) {
 	return true;
 }
 
+export function isa (constructor) {
+	return (input) => input instanceof constructor;
+}
 
 const IS_LOOKUP = new Map([
 	[ Array,     isArray     ],
@@ -801,6 +806,81 @@ export function filter (collection, predicate) {
 	}
 
 	throw new Error('filter can not be applied to objects or maps, perhaps you meant to use omit?');
+}
+
+
+export function find (collection, predicate) {
+	predicate = iteratee(predicate);
+
+	if (isArray(collection)) {
+		for (const [ i, value ] of collection.entries()) {
+			if (predicate(value, i, i)) return value;
+		}
+		return false;
+	}
+
+	if (isSet(collection)) {
+		let i = 0;
+		for (const value of collection) {
+			if (predicate(value, i, i++)) return value;
+		}
+		return false;
+	}
+
+	// received a Map
+	if (isMap(collection)) {
+		let i = 0;
+		for (const [ key, value ] of collection.entries()) {
+			if (predicate(value, key, i++)) return value;
+		}
+		return false;
+	}
+
+	// received an object hash
+	if (isObject(collection)) {
+		let i = 0;
+		for (const [ key, value ] of Object.entries(collection)) {
+			if (predicate(value, key, i++)) return value;
+		}
+		return false;
+	}
+}
+
+export function findIndex (collection, predicate) {
+	predicate = iteratee(predicate);
+
+	if (isArray(collection)) {
+		for (const [ i, value ] of collection.entries()) {
+			if (predicate(value, i, i)) return i;
+		}
+		return false;
+	}
+
+	if (isSet(collection)) {
+		let i = 0;
+		for (const value of collection) {
+			if (predicate(value, i, i++)) return i;
+		}
+		return false;
+	}
+
+	// received a Map
+	if (isMap(collection)) {
+		let i = 0;
+		for (const [ key, value ] of collection.entries()) {
+			if (predicate(value, key, i++)) return key;
+		}
+		return false;
+	}
+
+	// received an object hash
+	if (isObject(collection)) {
+		let i = 0;
+		for (const [ key, value ] of Object.entries(collection)) {
+			if (predicate(value, key, i++)) return key;
+		}
+		return false;
+	}
 }
 
 export function omit (collection, predicate) {
