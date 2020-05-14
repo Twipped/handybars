@@ -1,0 +1,53 @@
+{
+	"tweets": {
+		"1215738145473474560": {
+		  "id_str": "1215738145473474560",
+		  "created_at": "Fri Jan 10 20:52:15 +0000 2020",
+		  "user": {
+		    "screen_name": "NightlingBug",
+		    "avatar": {
+		      "input": "https://pbs.twimg.com/profile_images/1223585416202399744/6gt8SRZH_normal.jpg",
+		      "output": "tweets/NightlingBug.jpg"
+		    },
+		    "name_html": "Nightling Bug <img class=\"emoji\" draggable=\"false\" alt=\"🗝️\" src=\"https://twemoji.maxcdn.com/v/12.1.5/72x72/1f5dd.png\"/>",
+		    "verified": false,
+		    "protected": false
+		  },
+		  "html": "<p>You often feel directionless in life. When asked about career goals in High School, you didn't really care about your answer. Even careers centered in your interests seemed kind of intolerable. You struggle to imagine a future for yourself where you are happy or fulfilled.</p>",
+		  "entities": {},
+		  "media": [
+		    {
+		      "input": "https://pbs.twimg.com/profile_images/1223585416202399744/6gt8SRZH_normal.jpg",
+		      "output": "tweets/NightlingBug.jpg"
+		    }
+		  ]
+		},
+		"1215716435068100611": {
+		  "id_str": "1215716435068100611",
+		  "created_at": "Fri Jan 10 19:25:59 +0000 2020",
+		  "user": {
+		    "screen_name": "NightlingBug",
+		    "avatar": {
+		      "input": "https://pbs.twimg.com/profile_images/1223585416202399744/6gt8SRZH_normal.jpg",
+		      "output": "tweets/NightlingBug.jpg"
+		    },
+		    "name_html": "Nightling Bug <img class=\"emoji\" draggable=\"false\" alt=\"🗝️\" src=\"https://twemoji.maxcdn.com/v/12.1.5/72x72/1f5dd.png\"/>",
+		    "verified": false,
+		    "protected": false
+		  },
+		  "html": "<p>When you get ready to go, you just roll out of bed and throw on whatever. You don't really do any self-grooming, or care about what's on your body. You're a little proud of your lack of vanity, your deeper, non-appearance-level existence.</p>",
+		  "entities": {},
+		  "media": [
+		    {
+		      "input": "https://pbs.twimg.com/profile_images/1223585416202399744/6gt8SRZH_normal.jpg",
+		      "output": "tweets/NightlingBug.jpg"
+		    }
+		  ]
+		}
+	},
+	"ids": [
+		"1215738145473474560",
+		"1215716435068100611"
+	],
+	"className": "foo"
+}

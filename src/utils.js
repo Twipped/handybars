@@ -405,6 +405,14 @@ export function values (input) {
 	return [];
 }
 
+export function intersect (...arrays) {
+	return arrays.reduce((a, b) => a.filter((c) => b.includes(c)));
+}
+
+export function difference (...arrays) {
+	return arrays.reduce((a, b) => a.filter((c) => !b.includes(c)));
+}
+
 export function arrayify (input) {
 	if (isArray(input)) return input;
 
@@ -1083,3 +1091,11 @@ export function flatten (collection, depth = Infinity) {
 	);
 }
 
+export function jsonSoftParse (input, fallback) {
+	if (!isString(input)) return merge({}, input);
+	try {
+		return JSON.parse(input);
+	} catch (e) {
+		return fallback;
+	}
+}
