@@ -1,25 +1,27 @@
 
-import tokenizer from './tokenizer';
-import { wtf, isUndefined, isString } from './utils';
+import tokenize, {
+	T,
+	T_WHITESPACE,
+	T_TEXT,
+	T_BLOCK_START,
+	T_BLOCK_STOP,
+	T_BLOCK_OPEN,
+	T_BLOCK_CLOSE,
+	T_ELSE,
+	T_IDENTIFIER,
+	T_LITERAL_NUM,
+	T_LITERAL_STR,
+	T_LITERAL_PRI,
+	T_BRACKET_OPEN,
+	T_BRACKET_CLOSE,
+	T_PAREN_OPEN,
+	T_PAREN_CLOSE,
+	T_ASSIGNMENT,
+} from '../src/tokenizer';
+
+import { isUndefined, isString } from './utils';
 
 import {
-	BLOCK_OPEN,
-	BLOCK_CLOSE,
-	ELSE,
-	INSERTION,
-	RAW_TEXT,
-	IDENTIFIER,
-	LITERAL,
-	ASSIGNMENT,
-	BRACKET_OPEN,
-	BRACKET_CONTINUE,
-	BRACKET_APPEND,
-	BRACKET_CLOSE,
-	PAREN_OPEN,
-	PAREN_CLOSE,
-
-	isIdentifier,
-
 	Text,
 	Block,
 	Invocation,
@@ -29,241 +31,148 @@ import {
 	Collection,
 } from './taxonomy';
 
-export const tokenize = tokenizer('Blocks')
-	.rule(/{{else}}/, () => [
-		ELSE,
-	])
-	.rule(/{{#([\s\S]+?)}}/, (match) => [
-		BLOCK_OPEN,
-		tokenizeArguments(match[1]),
-	])
-	.rule(/{{\/([\s\S]+?)}}/, (match) => [
-		BLOCK_CLOSE,
-		tokenizeArguments(match[1]),
-	])
-	.rule(/{{{([^#/][\s\S]*?)}}}/, (match) => [
-		INSERTION,
-		tokenizeArguments(match[1]),
-		{ raw: true },
-	])
-	.rule(/{{([^#/][\s\S]*?)}}/, (match) => [
-		INSERTION,
-		tokenizeArguments(match[1]),
-	])
-	.rule(/[\w\W]+?(?={{)|[\w\W]+?$/, (match) => [
-		RAW_TEXT,
-		match[0],
-	])
-;
-
-export const tokenizeArguments = tokenizer('Arguments')
-	.rule(/\s+/) // WHITE SPACE
-	.rule(/]\[/,  () => [ BRACKET_CONTINUE ])
-	.rule(/]\./,  () => [ BRACKET_APPEND ])
-	.rule(/]/,  () => [ BRACKET_CLOSE ])
-	.rule(/\[/, () => [ BRACKET_OPEN ])
-	.rule(/\)/,  () => [ PAREN_CLOSE ])
-	.rule(/\(/, () => [ PAREN_OPEN ])
-	.rule(/(true|false|null)/i, (match) => [
-		LITERAL,
-		{
-			'true': true,
-			'false': false,
-			'null': null,
-		}[match[1].toLowerCase()],
-	])
-	.rule(/-?\d+(?:\.[\d]+)?/, (match) => [
-		LITERAL,
-		Number(match[0]),
-	])
-	.rule(/([a-zA-Z@$_][\w$_]*)=/,  (match) => [ ASSIGNMENT, match[1] ])
-	.rule(/([a-zA-Z@$_][\w.$_]*)(\[?)/, (match) => {
-		if (match[2]) return [ IDENTIFIER, match[1], { BRACKET_OPEN } ];
-		return [ IDENTIFIER, match[1] ];
-	})
-	.rule(/"((?:[^"\\]|\\.)*?)"/, (match) => [
-		LITERAL,
-		match[1],
-	])
-	.rule(/'((?:[^'\\]|\\.)*?)'/, (match) => [
-		LITERAL,
-		match[1],
-	])
-;
-
-export default function lex (input) {
+export default function lex (input, debug) {
 	const tokens = tokenize(input);
+	let tok, contents;
+	let tindex = 0;
 
-	function descend (invocationArguments) {
-		if (!isIdentifier(invocationArguments[0])) wtf('Block helpers must start with a variable identifier.');
+	if (debug) console.dir(tokens.map(({ type, ...rest }) => ({ type: T[type], ...rest }))); // eslint-disable-line no-console
+	function next (type, required) {
+		if (!tokens.length) return;
+		const t = tokens[0];
+		if (!isUndefined(type) && t && t.type !== type) {
+			if (required) wtf(isString(required) ? required : `Expected ${type} but found ${T[t.type]}`, t);
+			return;
+		}
+		contents = t.contents;
+		tindex++;
+		return (tok = tokens.shift());
+	}
 
-		const type = invocationArguments[0][1];
+	function peek (type, delta = 0) {
+		const t = tokens[Math.max(0, delta)];
+		if (!isUndefined(type) && t && t.type !== type) return;
+		return t;
+	}
+
+
+	const err = new SyntaxError();
+	function wtf (msg = 'Unexpected token: ' + T[tok.type], { line, column, ...extra } = tok || {}) {
+		msg += (line ? ` (${line}:${column})` : '');
+		if (debug) msg += `[Token ${tindex}]`;
+		let e = err;
+		if (debug) e = new SyntaxError(msg);
+		else err.message = msg;
+		throw Object.assign(e, extra);
+	}
+
+	const is = (type) => (t = tok) => t && t.type === type;
+	const isIdentifier   = is(T_IDENTIFIER);
+	const isText         = is(T_TEXT);
+	const isWhitespace   = is(T_WHITESPACE);
+	const isBlockStart   = is(T_BLOCK_START);
+	const isBlockStop    = is(T_BLOCK_STOP);
+	const isBracketOpen  = is(T_BRACKET_OPEN);
+	const isBracketClose = is(T_BRACKET_CLOSE);
+	const isParenOpen    = is(T_PAREN_OPEN);
+	const isParenClose   = is(T_PAREN_CLOSE);
+	const isAssignment   = is(T_ASSIGNMENT);
+	const isLiteralNum   = is(T_LITERAL_NUM);
+	const isLiteralStr   = is(T_LITERAL_STR);
+	const isLiteralPri   = is(T_LITERAL_PRI);
+	const isLiteral = (t = tok) => isLiteralNum(t) || isLiteralStr(t) || isLiteralPri(t);
+
+	function descendBlock (raw) {
+		let isRoot = false;
+		if (!tok) {
+			isRoot = true;
+		} else if (!isIdentifier()) wtf(`Block helpers must start with a variable identifier, found "${tok.contents}" (${T[tok.type]})`);
+
 		const block = new Block({
-			type,
-			invoker: type === 'ROOT' ? null : lexArguments(invocationArguments),
+			type: isRoot ? 'ROOT' : contents,
+			invoker: isRoot ? null : descendInvocation(),
 			left: [],
 		});
+		if (raw) block.raw = raw;
 
 		let children = block.left;
 
-		let tok;
-		while ((tok = tokens.shift())) {
-			const [ tokType, tokValue, tokOptions ] = tok;
-
-			if (tokType === RAW_TEXT) {
-				children.push(new Text({ value: tokValue }));
+		while (next()) {
+			if (isText()) {
+				children.push(new Text(contents));
 				continue;
 			}
 
-			if (tokType === BLOCK_CLOSE) {
-				const [ closeTarget ] = tokValue;
-				if (!isIdentifier(closeTarget)) wtf('Invalid block type: ' + closeTarget[1]);
-				if (closeTarget[1] !== block.type) wtf('Mismatching block closure: ' + closeTarget[1]);
-				if (!children.length) children.push(new Text());
-				return block;
-			}
-
-			if (tokType === BLOCK_OPEN) {
-				const [ openTarget ] = tokValue;
-				if (!isIdentifier(openTarget)) wtf('Invalid block type: ' + openTarget[1]);
-				children.push(descend(tokValue));
-				if (tokOptions) Object.assign(children[ children.length - 1], tokOptions);
+			if (isBlockStart()) {
+				const r = tok.raw;
+				if (next(T_BLOCK_OPEN)) {
+					next();
+					children.push(descendBlock(r));
+				} else if (next(T_ELSE)) {
+					if (!children.length) children.push(new Text());
+					children = block.right = [];
+					while (next(T_WHITESPACE)); // allow whitespace in the end of closing tags
+					next(T_BLOCK_STOP, `Expected }}, found "${tok.contents}" (${T[tok.type]})`);
+				} else if (next(T_BLOCK_CLOSE)) {
+					next(T_IDENTIFIER, `The first argument of a block must be an identifier, found "${tok.contents}" (${T[tok.type]})`);
+					if (contents !== block.type) wtf(`Expected {{/${block.type}}} but found {{/${contents}}}`);
+					if (!children.length) children.push(new Text());
+					while (next(T_WHITESPACE)); // allow whitespace in the end of closing tags
+					next(T_BLOCK_STOP, `Expected }}, found "${tok.contents}" (${T[tok.type]})`);
+					return block;
+				} else if (next(T_IDENTIFIER)) {
+					children.push(new Block({
+						type: contents,
+						invoker: descendInvocation(),
+						raw: r,
+					}));
+				} else wtf(`This shouldn't have happened. "${peek().contents}" (${T[peek().type]})`);
 				continue;
 			}
 
-			if (tokType === INSERTION) {
-				const [ openTarget ] = tokValue;
-				children.push(new Block({
-					type: openTarget[1],
-					invoker: lexArguments(tokValue),
-					...tokOptions,
-				}));
-			}
-
-			if (tokType === ELSE) {
-				if (!children.length) children.push(new Text());
-				children = block.right = [];
-				continue;
-			}
+			wtf(`Unexpected token while processing block children for {{#${block.type}}}: "${tok.contents}" (${T[tok.type]})`);
 		}
 
-		if (block.type !== 'ROOT') wtf('Unexpected end of template, unclosed block: ' + block.type);
+		if (!isRoot) wtf(`Unexpected end of template, unclosed {{#${block.type}}}`);
 		return block;
-	}
-
-	return descend([ [ 'IDENTIFIER', 'ROOT' ] ]);
-}
-
-export function lexArguments (input) {
-	const tokens = [ ...input ];
-
-	function peek (type, delta) {
-		if (isUndefined(type) || (isString(type) && isUndefined(delta))) delta = 1;
-		const tok = tokens[Math.max(0, delta - 1)];
-		if (type && tok && tok[0] !== type) return null;
-		return tok;
-	}
-
-	function read (type) {
-		const tok = tokens[0];
-		if (type && tok[0] !== type) return null;
-		return tokens.shift();
-	}
-
-	function descendCompoundIdent (initial) {
-		const ident = new CompoundIdentifier(initial);
-
-		let tok;
-		let appending = false;
-		while ((tok = read())) {
-			const [ tokType, tokValue, tokOptions ] = tok;
-
-			if (tokType === BRACKET_APPEND) {
-				appending = true;
-				continue;
-			}
-
-			if (tokType === BRACKET_CONTINUE) {
-				continue;
-			}
-
-			if (tokType === BRACKET_CLOSE) {
-				return ident;
-			}
-
-			if (tokType === IDENTIFIER) {
-				const opening = tokOptions && tokOptions[BRACKET_OPEN];
-				if (appending) {
-					appending = false;
-					if (opening) {
-						ident.pushRef(new Identifier(tokValue));
-					} else {
-						ident.pushTarget(new Identifier(tokValue));
-					}
-				} else if (opening) {
-					ident.pushRef(descendCompoundIdent(tokValue));
-				} else {
-					ident.pushRef(new Identifier(tokValue));
-				}
-
-				if (peek(IDENTIFIER) || peek(LITERAL)) {
-					wtf('Unexpected double identifier/literal inside compound identifier', ident);
-				}
-				continue;
-			}
-
-			if (tokType === LITERAL) {
-				if (appending) {
-					wtf('Unexpected literal found appended to a compound identifier.', ident);
-				}
-
-				ident.pushTarget(new Literal(tokValue));
-				continue;
-			}
-
-			if (tokType === PAREN_OPEN) {
-				ident.pushRef(descendInvocation(true));
-				continue;
-			}
-
-			wtf('Unexpected token: ' + tokType);
-		}
-
-		return ident;
 	}
 
 	function descendInvocation (embedded = false) {
 		const invocation = new Invocation();
 		const children = invocation.arguments;
 
-		let tok;
 		let assigning = false;
-		while ((tok = read())) {
-			const [ tokType, tokValue, tokOptions ] = tok;
+		do {
+			if (children.length && embedded) children[0].critical = true;
 
-			if (children.length && tokType !== PAREN_CLOSE) children[0].critical = true;
+			if (isWhitespace()) continue;
 
-			if (tokType === IDENTIFIER) {
-				if (tokOptions && tokOptions[BRACKET_OPEN]) {
+			if (isIdentifier()) {
+				if (peek(T_BRACKET_OPEN)) {
 					if (assigning) {
-						invocation.set(assigning, descendCompoundIdent(tokValue));
+						invocation.set(assigning, descendCompoundIdent(contents));
 						assigning = false;
 					} else {
-						children.push(descendCompoundIdent(tokValue));
+						children.push(descendCompoundIdent(contents));
 					}
 				} else if (assigning) {
-					invocation.set(assigning, new Identifier(tokValue));
+					invocation.set(assigning, new Identifier(contents));
 					assigning = false;
 				} else {
-					children.push(new Identifier(tokValue));
+					children.push(new Identifier(contents));
 				}
-
 				continue;
 			}
 
-			if (!children.length) wtf('Block helpers must start with a variable identifier.');
+			if (isBlockStop()) {
+				if (children.length > 1) children[0].critical = true;
+				return invocation;
+			}
 
-			if (tokType === PAREN_OPEN) {
+			if (!children.length) wtf(`Block helpers must start with a variable identifier, found "${tok.contents}" (${T[tok.type]})`);
+
+			if (isParenOpen()) {
+				next();
 				if (assigning) {
 					invocation.set(assigning, descendInvocation(true));
 					assigning = false;
@@ -273,17 +182,17 @@ export function lexArguments (input) {
 				continue;
 			}
 
-			if (tokType === LITERAL) {
+			if (isLiteral()) {
 				if (assigning) {
-					invocation.set(assigning, new Literal(tokValue));
+					invocation.set(assigning, new Literal(contents, tok.type));
 					assigning = false;
 				} else {
-					children.push(new Literal(tokValue));
+					children.push(new Literal(contents, tok.type));
 				}
 				continue;
 			}
 
-			if (tokType === BRACKET_OPEN) {
+			if (isBracketOpen()) {
 				if (assigning) {
 					invocation.set(assigning, descendCollection());
 					assigning = false;
@@ -293,65 +202,126 @@ export function lexArguments (input) {
 				continue;
 			}
 
-			if (assigning) wtf('Unexpected token: ' + tokType);
+			if (assigning) wtf();
 
-			if (tokType === PAREN_CLOSE) {
-				if (!embedded) wtf('Unexpected token: ' + tokType);
+			if (isParenClose()) {
+				if (!embedded) wtf();
 				return invocation;
 			}
 
-			if (tokType === ASSIGNMENT) {
-				assigning = tokValue;
+			if (isAssignment()) {
+				const last = children.pop();
+				assigning = last.target;
 				continue;
 			}
 
-			wtf('Unexpected token: ' + tokType);
-		}
+			wtf();
+		} while (next());
 
 		if (embedded) wtf('Unexpected end of token stream, unclosed nested invocation.');
 		return invocation;
+	}
+
+	function descendCompoundIdent (initial) {
+		const ident = new CompoundIdentifier(initial);
+
+		let ref = false;
+		while (next()) {
+
+			if (isWhitespace()) {
+				break;
+			}
+
+			if (isBracketClose()) {
+				const nt = peek();
+				// ]. or ][ is a continuation of the cIdent
+				if (isBracketOpen(nt) || isIdentifier(nt)) {
+					continue;
+				}
+				break;
+			}
+
+			if (isIdentifier()) {
+				if (next(T_BRACKET_OPEN)) {
+					ident.pushRef(descendCompoundIdent(contents));
+				} if (ref) {
+					ref = false;
+					ident.pushRef(new Identifier(contents));
+				} else {
+					ident.pushTarget(new Identifier(contents));
+				}
+
+				const nt = peek();
+				if (isBracketOpen(nt) || isBracketClose(nt)) {
+					continue;
+				}
+				break;
+			}
+
+			if (isParenOpen()) {
+				ident.pushRef(descendInvocation(true));
+				continue;
+			}
+
+			if (isLiteral()) {
+				ident.pushTarget(new Literal(contents, tok.type));
+				continue;
+			}
+
+			if (isBracketOpen()) {
+				ref = true;
+				continue;
+			}
+
+			break;
+		}
+
+		return ident;
 	}
 
 	function descendCollection () {
 		const collection = new Collection();
 		const children = collection.arguments;
 
-		let tok;
-		while ((tok = read())) {
-			const [ tokType, tokValue, tokOptions ] = tok;
+		while (next()) {
 
-			if (tokType === BRACKET_CLOSE) {
+			if (isWhitespace()) continue;
+
+			if (isBracketClose()) {
 				return collection;
 			}
 
-			if (tokType === PAREN_OPEN) {
+			if (isParenOpen()) {
 				children.push(descendInvocation(true));
 				continue;
 			}
 
-			if (tokType === IDENTIFIER) {
-				if (tokOptions[BRACKET_OPEN]) {
-					children.push(descendCompoundIdent(tok));
+			if (isIdentifier()) {
+				if (next(T_BRACKET_OPEN)) {
+					children.push(descendCompoundIdent(contents));
 				} else {
-					children.push(new Identifier(tokValue));
+					children.push(new Identifier(contents));
 				}
 				continue;
 			}
 
-			if (tokType === LITERAL) {
-				children.push(new Literal(tokValue));
+			if (isLiteral()) {
+				children.push(new Literal(contents, tok.type));
 				continue;
 			}
 
-			if (tokType === BRACKET_OPEN) {
+			if (isBracketOpen()) {
 				children.push(descendCollection());
 				continue;
 			}
 
-			wtf('Unexpected token: ' + tokType);
+			wtf();
 		}
 
+		wtf('Unexpected end of token stream, unclosed collection.');
 	}
 
-	return descendInvocation();
+	const result = descendBlock();
+	if (tokens.length) wtf('There are still tokens left, how did we get here?');
+	return result;
 }

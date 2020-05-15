@@ -75,24 +75,6 @@ export function safeJoin (inputs, predicate, delimiter = '') {
 	return { value: map(inputs, (val, k, i) => safe.up(predicate(val, k, i)).value).join(delimiter) };
 }
 
-export function tis (type, value) {
-	const matchType = Array.isArray(type)
-		? ((tok) => type.includes(tok.type))
-		: ((tok) => tok[0] === type);
-
-	if (arguments.length === 1) {
-		return (tok, subvalue) => matchType(tok) &&
-		(arguments.length === 1 || uc(tok[1]) === uc(subvalue));
-	}
-
-	if (typeof value == 'function') {
-		return (tok) => matchType(tok) && value(tok[1]);
-	}
-
-	value = uc(value);
-	return (tok) => matchType(tok) && uc(tok[1]) === value;
-}
-
 export function wtf (msg, info) {
 	if (info) console.error(info); // eslint-disable-line no-console
 	throw new Error(msg);

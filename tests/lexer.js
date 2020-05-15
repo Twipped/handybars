@@ -11,22 +11,27 @@ import {
 	Literal,
 	CompoundIdentifier,
 } from '../src/taxonomy';
+import {
+	T_LITERAL_NUM,
+	T_LITERAL_STR,
+	T_LITERAL_PRI,
+} from '../src/tokenizer';
 
 tap.test('lex', (t) => {
-	const result = lex('a\nb{{c}}d{{#e}}{{f.g z=6.4 ["h" 2]}}i{{/e}}k{{l (m)}}n');
+	const result = lex('a\nb{{c}}d{{#e}}{{f.g z=6.4 ["h" 2]}}i{{/e}}k{{l (m) true false null }}n');
 
 	const expected = new Block({
 		type: 'ROOT',
 		invoker: null,
 		left: [
-			new Text({ value: 'a\nb' }),
+			new Text('a\nb'),
 			new Block({
 				type: 'c',
 				invoker: new Invocation({
 					arguments: [ new Identifier('c') ],
 				}),
 			}),
-			new Text({ value: 'd' }),
+			new Text('d'),
 			new Block({
 				type: 'e',
 				invoker: new Invocation({
@@ -39,28 +44,31 @@ tap.test('lex', (t) => {
 							arguments: [
 								new Identifier('f.g', true),
 								new Collection([
-									new Literal('h'),
-									new Literal(2),
+									new Literal('h', T_LITERAL_STR),
+									new Literal('2', T_LITERAL_NUM),
 								]),
 							],
-							hash: { z: new Literal(6.4) },
+							hash: { z: new Literal('6.4', T_LITERAL_NUM) },
 							hashCount: 1,
 						}),
 					}),
-					new Text({ value: 'i' }),
+					new Text('i'),
 				],
 			}),
-			new Text({ value: 'k' }),
+			new Text('k'),
 			new Block({
 				type: 'l',
 				invoker: new Invocation({ arguments: [
 					new Identifier('l', true),
 					new Invocation({
-						arguments: [ new Identifier('m') ],
+						arguments: [ new Identifier('m', true) ],
 					}),
+					new Literal(true, T_LITERAL_PRI),
+					new Literal(false, T_LITERAL_PRI),
+					new Literal(null, T_LITERAL_PRI),
 				] }),
 			}),
-			new Text({ value: 'n' }),
+			new Text('n'),
 		],
 	});
 
@@ -84,7 +92,7 @@ tap.test('lex else', (t) => {
 					],
 				}),
 				left: [
-					new Text({ value: 'b' }),
+					new Text('b'),
 				],
 				right: [
 					new Block({
@@ -119,7 +127,7 @@ tap.test('empty block', (t) => {
 					],
 				}),
 				left: [
-					new Text({ value: '' }),
+					new Text(),
 				],
 			}),
 		],
@@ -145,10 +153,10 @@ tap.test('empty block w/ else', (t) => {
 					],
 				}),
 				left: [
-					new Text({ value: '' }),
+					new Text(),
 				],
 				right: [
-					new Text({ value: '' }),
+					new Text(),
 				],
 			}),
 		],
@@ -159,7 +167,7 @@ tap.test('empty block w/ else', (t) => {
 });
 
 tap.test('compound identifier', (t) => {
-	const result = lex('{{items["a"]}}{{#each ids}}{{items[this].id}}{{/each}}');
+	const result = lex('{{items["a"]}}{{#each ids}}{{items[this].id}}{{/each}}', false);
 	const expected = new Block({
 		type: 'ROOT',
 		invoker: null,
@@ -167,7 +175,7 @@ tap.test('compound identifier', (t) => {
 			new Block({
 				type: 'items',
 				invoker: new Invocation({ arguments: [
-					new CompoundIdentifier('items', [ new Literal('a') ]),
+					new CompoundIdentifier('items', [ new Literal('a', T_LITERAL_STR) ]),
 				] }),
 			}),
 			new Block({

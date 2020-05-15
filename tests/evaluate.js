@@ -10,6 +10,11 @@ import {
 } from '../src/taxonomy';
 import Helpers from '../src/helpers';
 import { parse, makeContext } from '../src/index';
+import {
+	// T_LITERAL_NUM,
+	T_LITERAL_STR,
+	// T_LITERAL_PRI,
+} from '../src/tokenizer';
 
 tap.test('evaluate 1', (t) => {
 
@@ -17,14 +22,14 @@ tap.test('evaluate 1', (t) => {
 		type: 'ROOT',
 		invoker: null,
 		left: [
-			new Text({ value: 'a\nb' }),
+			new Text('a\nb'),
 			new Block({
 				type: 'c',
 				invoker: new Invocation({
 					arguments: [ new Identifier('c') ],
 				}),
 			}),
-			new Text({ value: 'd' }),
+			new Text('d'),
 			new Block({
 				type: 'e',
 				invoker: new Invocation({
@@ -36,14 +41,14 @@ tap.test('evaluate 1', (t) => {
 						invoker: new Invocation({
 							arguments: [
 								new Identifier('f.g', true),
-								new Literal('h'),
+								new Literal('h', T_LITERAL_STR),
 							],
 						}),
 					}),
-					new Text({ value: 'i' }),
+					new Text('i'),
 				],
 			}),
-			new Text({ value: '<k>' }),
+			new Text('<k>'),
 			new Block({
 				type: 'l',
 				invoker: new Invocation({
@@ -53,7 +58,7 @@ tap.test('evaluate 1', (t) => {
 					],
 				}),
 			}),
-			new Text({ value: 'n' }),
+			new Text('n'),
 		],
 	});
 
@@ -104,7 +109,7 @@ tap.test('evaluate else', (t) => {
 					arguments: [ new Identifier('a') ],
 				}),
 				left: [
-					new Text({ value: 'b' }),
+					new Text('b'),
 				],
 				right: [
 					new Block({

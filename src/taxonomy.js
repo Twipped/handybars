@@ -1,40 +1,17 @@
 
-import { tis, get, wtf, isPrimitive, isFunction, isUndefinedOrNull, safe, mapValues, makeContext, MISSING } from './utils';
+import { get, wtf, isPrimitive, isFunction, isUndefinedOrNull, safe, mapValues, makeContext, MISSING } from './utils';
 
-export const BLOCK_OPEN  = 'BLOCK_OPEN';
-export const BLOCK_CLOSE = 'BLOCK_CLOSE';
-export const ELSE        = 'ELSE';
-export const INSERTION   = 'INSERTION';
-export const RAW_TEXT    = 'RAW_TEXT';
-export const IDENTIFIER  = 'IDENTIFIER';
-export const LITERAL     = 'LITERAL';
-export const ASSIGNMENT  = 'ASSIGNMENT';
-export const BRACKET_OPEN     = 'BRACKET_OPEN';
-export const BRACKET_CONTINUE = 'BRACKET_CONTINUE';
-export const BRACKET_APPEND   = 'BRACKET_APPEND';
-export const BRACKET_CLOSE    = 'BRACKET_CLOSE';
-export const PAREN_OPEN  = 'PAREN_OPEN';
-export const PAREN_CLOSE = 'PAREN_CLOSE';
-
-export const isBlockOpen     = tis(BLOCK_OPEN);
-export const isBlockClose    = tis(BLOCK_CLOSE);
-export const isElse          = tis(ELSE);
-export const isInsertion     = tis(INSERTION);
-export const isRawText       = tis(RAW_TEXT);
-export const isIdentifier    = tis(IDENTIFIER);
-export const isLiteral       = tis(LITERAL);
-export const isAssignment    = tis(ASSIGNMENT);
-export const isBracketOpen   = tis(BRACKET_OPEN);
-export const isBracketClose  = tis(BRACKET_CLOSE);
-export const isParenOpen     = tis(PAREN_OPEN);
-export const isParenClose    = tis(PAREN_CLOSE);
+import {
+	T_LITERAL_NUM,
+	T_LITERAL_PRI,
+} from './tokenizer';
 
 export class Node {
 	evaluate () { return null; }
 }
 
 export class Text extends Node {
-	constructor ({ value = '' } = {}) {
+	constructor (value = '') {
 		super();
 		this.value = value;
 	}
@@ -45,13 +22,14 @@ export class Text extends Node {
 }
 
 export class Block extends Node {
-	constructor ({ type, invoker, ...props }) {
+	constructor ({ type, invoker, left, right, raw, ...props }) {
 		super();
 		Object.assign(this, props);
 		this.type = type;
 		this.invoker = invoker || null;
-		this.left = props.left || null;
-		this.right = props.right || null;
+		this.left = left || null;
+		this.right = right || null;
+		this.raw = raw || false;
 	}
 
 	_descender (tree, scope, env) {
@@ -188,12 +166,14 @@ export class CompoundIdentifier extends Node {
 }
 
 export class Literal extends Node {
-	constructor (value) {
+	constructor (value, type = T_LITERAL_PRI) {
 		super();
 		this.value = value;
+		this.type = type;
 	}
 
 	evaluate () {
+		if (this.type === T_LITERAL_NUM) return parseFloat(this.value);
 		return this.value;
 	}
 }
@@ -210,9 +190,6 @@ function render (children, scope, env) {
 
 
 function resolve (what, scope, env, needed = false) {
-	if (isLiteral(what)) return what[1];
-	if (isIdentifier(what)) what = what[1];
-
 	let target;
 	if (!isUndefinedOrNull(scope)  && !isPrimitive(scope) && (target = get(scope, what, MISSING)) !== MISSING) return target;
 	if (!isUndefinedOrNull(env)    && (target = get(env, what, MISSING)) !== MISSING) return target;
