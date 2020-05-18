@@ -16,7 +16,7 @@ Note, this project is very much a work in progress, the api and behavior can and
 - `../` does not exist. Instead, use `@parent.` to access the previous scope. However, you may find you don't need this unless a local scope's keys collide with a parent scope's keys.
 - There is no built in whitespace control
 - Handybars does not support the `as` syntax, such as `{{#each users as | user |}}`
-- `{#each}` can iterate any Array, Set, Map or plain Object.
+- `{{#each}}` can iterate any Array, Set, Map or plain Object.
 - Blocks may contain arrays: `{{#each [ '1st' '2nd' '3rd' ]}}`
 - Blocks support inline value lookups: `{{order[request.id].creationDate}}`
 - Blocks do NOT support the `value.[N]` lookup syntax (note the period before the bracket)
