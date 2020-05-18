@@ -36,21 +36,20 @@ export default function lex (input, debug) {
 	let tok, contents;
 	let tindex = 0;
 
-	if (debug) console.dir(tokens.map(({ type, ...rest }) => ({ type: T[type], ...rest }))); // eslint-disable-line no-console
 	function next (type, required) {
-		if (!tokens.length) return;
-		const t = tokens[0];
+		if (tokens.eof) return;
+		const t = tokens.peek();
 		if (!isUndefined(type) && t && t.type !== type) {
 			if (required) wtf(isString(required) ? required : `Expected ${type} but found ${T[t.type]}`, t);
 			return;
 		}
 		contents = t.contents;
 		tindex++;
-		return (tok = tokens.shift());
+		return (tok = tokens.next());
 	}
 
-	function peek (type, delta = 0) {
-		const t = tokens[Math.max(0, delta)];
+	function peek (type, delta = 1) {
+		const t = tokens.peek(delta);
 		if (!isUndefined(type) && t && t.type !== type) return;
 		return t;
 	}
@@ -322,6 +321,6 @@ export default function lex (input, debug) {
 	}
 
 	const result = descendBlock();
-	if (tokens.length) wtf('There are still tokens left, how did we get here?');
+	if (!tokens.eof) wtf('There are still tokens left, how did we get here?');
 	return result;
 }

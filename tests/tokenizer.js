@@ -44,7 +44,7 @@ function deline (toks) {
 }
 
 tap.test('tokenize 1', (t) => {
-	const result = tokenize('a\nb{{c}}d{{#e (f.g) "h\\"}}" [.1 0.1 1 -10 true false null]}}{{i[j] i[j].k x=i.j[k] }}{{else}}1{{/e}}2{{{l m}}}n');
+	const result = tokenize('a\nb{{c}}d{{#e (f.g) "h\\"}}" [.1 0.1 1 -10 true false null]}}{{i[j] i[j].k x=i.j[k] }}{{else}}1{{/e}}2{{{l m}}}n').readAll();
 
 	t.deepEqual(deline(result), [
 		TEXT('a\nb'),

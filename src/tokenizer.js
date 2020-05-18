@@ -73,6 +73,7 @@ export default function tokenizer (input) {
 	let col = 1;
 
 	const tokens = [];
+	let tindex = -1;
 
 	function token (type, contents = null, l = line, c = col) {
 		const tok = { type, contents, line: l, column: c };
@@ -316,6 +317,32 @@ export default function tokenizer (input) {
 		readBlockEnd,
 	];
 
-	while (read());
-	return tokens;
+	return {
+		get eof () {
+			return eof();
+		},
+		get current () {
+			while (tindex >= tokens.length && !eof()) read();
+			return tokens[tindex];
+		},
+		readAll () {
+			while (read());
+			return tokens;
+		},
+		reset () {
+			tindex = -1;
+			return this;
+		},
+		next () {
+			tindex++;
+			while (tindex >= tokens.length && !eof()) read();
+			return tokens[tindex];
+		},
+		peek (delta = 1) {
+			const idx = tindex + delta;
+			while (idx >= tokens.length && !eof()) read();
+			return tokens[idx];
+		},
+
+	};
 }
