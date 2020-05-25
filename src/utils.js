@@ -291,6 +291,7 @@ export function merge (...sources) {
 }
 
 export function get (obj, path, defaultValue) {
+	if (isUndefinedOrNull(obj) || isPrimitive(obj)) throw new TypeError('Input object was not a collection.');
 	if (isUndefinedOrNull(path) || path === '') return false;
 	if (isNumber(path)) path = [ String(path) ];
 	else if (isString(path)) {
