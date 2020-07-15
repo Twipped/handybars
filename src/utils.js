@@ -997,6 +997,24 @@ export function makeIterate (predicate, tuple = false) {
 	return iterate;
 }
 
+export function transcriber (datamap) {
+	return function (source, predicate) {
+		const result = {};
+		datamap.forEach(([ from, to, trans ], index) => {
+			if (source[from] === undefined) return;
+			if (typeof to === 'function') {
+				trans = to;
+				to = from;
+			} else if (to === undefined) to = from;
+
+			const value = trans ? trans(source[from]) : source[from];
+
+			result[to] = predicate ? predicate(value, { from, to }, index) : value;
+		});
+		return result;
+	};
+}
+
 export function mapValues (collection, predicate) {
 	if (!isObject(collection)) throw new Error('mapValues only works for simple objects, use mapReduce.');
 	const iterate = makeIterate(predicate);
